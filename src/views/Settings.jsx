@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLiveQuery } from '../db';
-import { db } from '../db';
-import { Save, Download, Upload, Info, AlertTriangle, CheckCircle2, Shield, HelpCircle, Eye, EyeOff } from 'lucide-react';
+import { useLiveQuery, db, auth } from '../db';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { Save, Download, Upload, Info, AlertTriangle, CheckCircle2, Shield, Eye, EyeOff, Key } from 'lucide-react';
 
 export default function Settings() {
   const [normalRate, setNormalRate] = useState('');
@@ -15,39 +15,23 @@ export default function Settings() {
   const [pickupLocations, setPickupLocations] = useState('');
   const [saveSchoolSuccess, setSaveSchoolSuccess] = useState(false);
 
-  // Security Settings states
-  const [q1, setQ1] = useState('');
-  const [ans1, setAns1] = useState('');
-  const [q2, setQ2] = useState('');
-  const [ans2, setAns2] = useState('');
-  const [q3, setQ3] = useState('');
-  const [ans3, setAns3] = useState('');
-  const [saveSecuritySuccess, setSaveSecuritySuccess] = useState(false);
-
-  // Show/Hide answer toggle states
-  const [showAns1, setShowAns1] = useState(false);
-  const [showAns2, setShowAns2] = useState(false);
-  const [showAns3, setShowAns3] = useState(false);
+  // Change Password states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  
+  const [changePasswordError, setChangePasswordError] = useState('');
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const importFileRef = useRef(null);
 
   // Fetch settings
   const pricingSettings = useLiveQuery(() => db.settings.get('pricing'));
   const schoolDetails = useLiveQuery(() => db.settings.get('schoolDetails'));
-  const securitySettings = useLiveQuery(() => db.settings.get('security'));
-
-  const questionOptions = [
-    'In what city or town did your parents meet?',
-    'What was the make and model of your first car?',
-    'What is your favorite childhood movie?',
-    'What is the name of the hospital where you were born?',
-    'In what city or town did you get your first job?',
-    'What was the name of your first pet?',
-    'What was the street name where you grew up?',
-    'What is the name of your favorite book?',
-    'What was the name of your primary school?',
-    'What was your favorite subject in high school?'
-  ];
 
   // Sync form inputs with DB values
   useEffect(() => {
@@ -67,16 +51,7 @@ export default function Settings() {
     }
   }, [schoolDetails]);
 
-  useEffect(() => {
-    if (securitySettings) {
-      setQ1(securitySettings.question1 || '');
-      setAns1(securitySettings.answer1 || '');
-      setQ2(securitySettings.question2 || '');
-      setAns2(securitySettings.answer2 || '');
-      setQ3(securitySettings.question3 || '');
-      setAns3(securitySettings.answer3 || '');
-    }
-  }, [securitySettings]);
+
 
   // Handle Save Pricing Rates
   const handleSavePricing = async (e) => {
@@ -127,39 +102,51 @@ export default function Settings() {
     }
   };
 
-  // Handle Save Security Settings
-  const handleSaveSecurity = async (e) => {
+  // Handle Change Password (Firebase Auth)
+  const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!q1 || !ans1.trim() || !q2 || !ans2.trim() || !q3 || !ans3.trim()) {
-      alert('Please configure all 3 security questions and provide answers.');
-      return;
-    }
-    if (q1 === q2 || q1 === q3 || q2 === q3) {
-      alert('Each security question must be unique.');
+    setChangePasswordError('');
+    setChangePasswordSuccess(false);
+
+    if (newPassword !== confirmPassword) {
+      setChangePasswordError('New password and confirm password do not match.');
       return;
     }
 
+    if (newPassword.length < 6) {
+      setChangePasswordError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      setChangePasswordError('No authenticated user found. Please re-login.');
+      return;
+    }
+
+    setChangingPassword(true);
     try {
-      const currentSec = await db.settings.get('security') || { password: 'ujyalo2026' };
-      const updatedSec = { ...currentSec };
-      delete updatedSec.recoveryEmail; // Clean up old recoveryEmail if it exists
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
       
-      await db.settings.put({
-        ...updatedSec,
-        id: 'security',
-        question1: q1,
-        answer1: ans1.trim(),
-        question2: q2,
-        answer2: ans2.trim(),
-        question3: q3,
-        answer3: ans3.trim(),
-        updatedAt: new Date().toISOString()
-      });
-
-      setSaveSecuritySuccess(true);
-      setTimeout(() => setSaveSecuritySuccess(false), 3000);
+      // Update password
+      await updatePassword(user, newPassword);
+      
+      setChangePasswordSuccess(true);
+      setCurrentPassword('');
+      newPassword && setNewPassword('');
+      confirmPassword && setConfirmPassword('');
+      setTimeout(() => setChangePasswordSuccess(false), 5000);
     } catch (err) {
-      alert('Failed to save security settings: ' + err.message);
+      console.error(err);
+      if (err.code === 'auth/wrong-password') {
+        setChangePasswordError('Incorrect current password.');
+      } else {
+        setChangePasswordError(err.message || 'Failed to update password.');
+      }
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -416,186 +403,141 @@ export default function Settings() {
               <Shield size={20} color="var(--primary)" /> Account & Security
             </h3>
             
-            <form onSubmit={handleSaveSecurity} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.75rem' }}>
-                  Configure 3 Security Questions
+                  Change Admin Password
                 </span>
-                
-                {/* Question 1 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                  <div className="form-group">
-                    <label htmlFor="q1">Security Question 1</label>
-                    <select
-                      id="q1"
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                  Update the master password for the active Firebase account (<strong>{auth.currentUser?.email}</strong>).
+                </p>
+
+                {/* Current Password */}
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label htmlFor="currentPassword">Current Password</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <Key size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
+                    <input
+                      id="currentPassword"
+                      type={showCurrentPass ? 'text' : 'password'}
                       className="form-control"
-                      value={q1}
-                      onChange={(e) => setQ1(e.target.value)}
+                      placeholder="Enter current password"
                       required
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      style={{ paddingLeft: '36px', paddingRight: '40px', width: '100%' }}
+                      disabled={changingPassword}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPass(!showCurrentPass)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 0
+                      }}
+                      tabIndex="-1"
                     >
-                      <option value="">Select Question 1...</option>
-                      {questionOptions.map(q => (
-                        <option key={q} value={q} disabled={q === q2 || q === q3}>
-                          {q}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="ans1">Answer 1</label>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <HelpCircle size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
-                      <input
-                        id="ans1"
-                        type={showAns1 ? 'text' : 'password'}
-                        className="form-control"
-                        placeholder="Answer 1"
-                        required
-                        value={ans1}
-                        onChange={(e) => setAns1(e.target.value)}
-                        style={{ paddingLeft: '36px', paddingRight: '40px', width: '100%' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAns1(!showAns1)}
-                        style={{
-                          position: 'absolute',
-                          right: '12px',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: 0
-                        }}
-                        tabIndex="-1"
-                      >
-                        {showAns1 ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
+                      {showCurrentPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                 </div>
 
-                {/* Question 2 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                  <div className="form-group">
-                    <label htmlFor="q2">Security Question 2</label>
-                    <select
-                      id="q2"
+                {/* New Password */}
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label htmlFor="newPassword">New Password</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <Key size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
+                    <input
+                      id="newPassword"
+                      type={showNewPass ? 'text' : 'password'}
                       className="form-control"
-                      value={q2}
-                      onChange={(e) => setQ2(e.target.value)}
+                      placeholder="Minimum 6 characters"
                       required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      style={{ paddingLeft: '36px', paddingRight: '40px', width: '100%' }}
+                      disabled={changingPassword}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 0
+                      }}
+                      tabIndex="-1"
                     >
-                      <option value="">Select Question 2...</option>
-                      {questionOptions.map(q => (
-                        <option key={q} value={q} disabled={q === q1 || q === q3}>
-                          {q}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="ans2">Answer 2</label>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <HelpCircle size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
-                      <input
-                        id="ans2"
-                        type={showAns2 ? 'text' : 'password'}
-                        className="form-control"
-                        placeholder="Answer 2"
-                        required
-                        value={ans2}
-                        onChange={(e) => setAns2(e.target.value)}
-                        style={{ paddingLeft: '36px', paddingRight: '40px', width: '100%' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAns2(!showAns2)}
-                        style={{
-                          position: 'absolute',
-                          right: '12px',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: 0
-                        }}
-                        tabIndex="-1"
-                      >
-                        {showAns2 ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
+                      {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                 </div>
 
-                {/* Question 3 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                  <div className="form-group">
-                    <label htmlFor="q3">Security Question 3</label>
-                    <select
-                      id="q3"
+                {/* Confirm New Password */}
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label htmlFor="confirmPassword">Confirm New Password</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <Key size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
+                    <input
+                      id="confirmPassword"
+                      type={showConfirmPass ? 'text' : 'password'}
                       className="form-control"
-                      value={q3}
-                      onChange={(e) => setQ3(e.target.value)}
+                      placeholder="Repeat new password"
                       required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      style={{ paddingLeft: '36px', paddingRight: '40px', width: '100%' }}
+                      disabled={changingPassword}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 0
+                      }}
+                      tabIndex="-1"
                     >
-                      <option value="">Select Question 3...</option>
-                      {questionOptions.map(q => (
-                        <option key={q} value={q} disabled={q === q1 || q === q2}>
-                          {q}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="ans3">Answer 3</label>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <HelpCircle size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
-                      <input
-                        id="ans3"
-                        type={showAns3 ? 'text' : 'password'}
-                        className="form-control"
-                        placeholder="Answer 3"
-                        required
-                        value={ans3}
-                        onChange={(e) => setAns3(e.target.value)}
-                        style={{ paddingLeft: '36px', paddingRight: '40px', width: '100%' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAns3(!showAns3)}
-                        style={{
-                          position: 'absolute',
-                          right: '12px',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: 0
-                        }}
-                        tabIndex="-1"
-                      >
-                        {showAns3 ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
+                      {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {saveSecuritySuccess && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success)', fontSize: '0.9rem', fontWeight: 600 }}>
-                  <CheckCircle2 size={18} /> Security settings saved successfully!
+              {changePasswordError && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: 600, backgroundColor: 'rgba(239, 68, 68, 0.05)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                  {changePasswordError}
                 </div>
               )}
 
-              <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start', marginTop: '0.5rem' }}>
-                <Save size={16} /> Save Security Settings
+              {changePasswordSuccess && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success)', fontSize: '0.9rem', fontWeight: 600, backgroundColor: 'rgba(16, 185, 129, 0.05)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+                  <CheckCircle2 size={18} /> Password updated successfully!
+                </div>
+              )}
+
+              <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start', marginTop: '0.5rem' }} disabled={changingPassword}>
+                <Save size={16} /> {changingPassword ? 'Updating...' : 'Update Password'}
               </button>
             </form>
           </div>
