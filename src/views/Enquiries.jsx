@@ -5,6 +5,7 @@ import { Trash2, Search, Phone, CheckCircle2 } from 'lucide-react';
 
 export default function Enquiries() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '' });
 
   const inquiries = useLiveQuery(() => db.inquiries.toArray()) || [];
 
@@ -20,23 +21,27 @@ export default function Enquiries() {
     markAsRead();
   }, []);
 
-  const handleDelete = async (id, name) => {
-    if (window.confirm(`Are you sure you want to delete the booking inquiry from "${name}"? It will be moved to the Recycle Bin.`)) {
-      try {
-        const item = await db.inquiries.get(id);
-        if (item) {
-          await db.trash.add({
-            id: 'enquiry-' + id,
-            type: 'enquiry',
-            deletedAt: new Date().toISOString(),
-            data: item
-          });
-          await db.inquiries.delete(id);
-        }
-      } catch (err) {
-        console.error("Failed to delete inquiry:", err);
-        alert("Error deleting inquiry: " + err.message);
+  const handleDeleteClick = (id, name) => {
+    setDeleteConfirm({ show: true, id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    const { id } = deleteConfirm;
+    setDeleteConfirm({ show: false, id: null, name: '' });
+    try {
+      const item = await db.inquiries.get(id);
+      if (item) {
+        await db.trash.add({
+          id: 'enquiry-' + id,
+          type: 'enquiry',
+          deletedAt: new Date().toISOString(),
+          data: item
+        });
+        await db.inquiries.delete(id);
       }
+    } catch (err) {
+      console.error("Failed to delete inquiry:", err);
+      alert("Error deleting inquiry: " + err.message);
     }
   };
 
@@ -124,7 +129,7 @@ export default function Enquiries() {
                         <button 
                           className="btn btn-secondary btn-icon-only btn-sm" 
                           style={{ color: 'var(--danger)' }}
-                          onClick={() => handleDelete(item.id, item.name)}
+                          onClick={() => handleDeleteClick(item.id, item.name)}
                           title="Delete Enquiry"
                         >
                           <Trash2 size={15} />
@@ -144,6 +149,59 @@ export default function Enquiries() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '1.75rem',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Confirm Deletion</h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+              Are you sure you want to delete the booking inquiry from <strong>{deleteConfirm.name}</strong>? It will be moved to the Recycle Bin.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setDeleteConfirm({ show: false, id: null, name: '' })}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={handleConfirmDelete}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
