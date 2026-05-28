@@ -21,6 +21,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const [ledgerTab, setLedgerTab] = useState('statement');
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '' });
   
   // Quick Action Sub-Modals
   const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
@@ -620,8 +621,14 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   };
 
   // Delete student
-  const handleDeleteStudent = async (studentId) => {
-    if (window.confirm(`Are you sure you want to delete ${activeStudent.name}? All associated bookings and payments will be moved to trash and can be restored later.`)) {
+  const handleDeleteStudentClick = (studentId, studentName) => {
+    setDeleteConfirm({ show: true, id: studentId, name: studentName });
+  };
+
+  const handleConfirmDeleteStudent = async () => {
+    const studentId = deleteConfirm.id;
+    setDeleteConfirm({ show: false, id: null, name: '' });
+    try {
       const studentData = await db.students.get(studentId);
       if (studentData) {
         const linkedBookings = await db.bookings.where('studentId').equals(studentId).toArray();
@@ -642,6 +649,9 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
         await Promise.all(linkedPayments.map(p => db.payments.delete(p.id)));
         setSelectedStudentId(null);
       }
+    } catch (err) {
+      console.error("Failed to delete student:", err);
+      alert("Error deleting student: " + err.message);
     }
   };
 
@@ -1233,7 +1243,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
               <button 
                 className="btn btn-danger btn-sm" 
                 style={{ padding: '0.4rem' }} 
-                onClick={() => handleDeleteStudent(activeStudent.id)}
+                onClick={() => handleDeleteStudentClick(activeStudent.id, activeStudent.name)}
                 title="Delete Student"
               >
                 <Trash2 size={16} />
@@ -2729,6 +2739,59 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
               </form>
             </Modal>
           )}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '1.75rem',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Confirm Deletion</h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+              Are you sure you want to delete <strong>{deleteConfirm.name}</strong>? All associated bookings and payments will be moved to trash and can be restored later.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setDeleteConfirm({ show: false, id: null, name: '' })}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={handleConfirmDeleteStudent}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

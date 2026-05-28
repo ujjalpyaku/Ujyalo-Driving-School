@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "firebase/firestore";
+import { initializeFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useState, useEffect } from "react";
 
@@ -15,7 +15,9 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const firestore = getFirestore(app);
+export const firestore = initializeFirestore(app, {
+  ignoreUndefinedProperties: true
+});
 export const auth = getAuth(app);
 
 // Initialize default settings if they don't exist
