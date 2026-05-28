@@ -125,16 +125,61 @@ const createTable = (collectionName) => {
   
   return {
     toArray: () => wrapQuery(colRef),
-    add: async (data) => await addDoc(colRef, data),
-    update: async (id, data) => await updateDoc(doc(firestore, collectionName, id), data),
-    delete: async (id) => await deleteDoc(doc(firestore, collectionName, id)),
+    add: async (data) => {
+      if (data.id) {
+        await setDoc(doc(firestore, collectionName, String(data.id)), data);
+      } else {
+        await addDoc(colRef, data);
+      }
+    },
+    update: async (id, data) => {
+      const docRef = doc(firestore, collectionName, String(id));
+      const d = await getDoc(docRef);
+      if (d.exists()) {
+        await updateDoc(docRef, data);
+      } else {
+        const q = query(colRef, where("id", "==", id));
+        const querySnap = await getDocs(q);
+        const batch = [];
+        querySnap.forEach(docSnap => {
+          batch.push(updateDoc(doc(firestore, collectionName, docSnap.id), data));
+        });
+        await Promise.all(batch);
+      }
+    },
+    delete: async (id) => {
+      const docRef = doc(firestore, collectionName, String(id));
+      const d = await getDoc(docRef);
+      if (d.exists()) {
+        await deleteDoc(docRef);
+      } else {
+        const q = query(colRef, where("id", "==", id));
+        const querySnap = await getDocs(q);
+        const batch = [];
+        querySnap.forEach(docSnap => {
+          batch.push(deleteDoc(doc(firestore, collectionName, docSnap.id)));
+        });
+        await Promise.all(batch);
+      }
+    },
     get: async (id) => { 
-      const d = await getDoc(doc(firestore, collectionName, id)); 
-      return d.exists() ? { id: d.id, ...d.data() } : null; 
+      const docRef = doc(firestore, collectionName, String(id));
+      const d = await getDoc(docRef); 
+      if (d.exists()) {
+        return { id: d.id, ...d.data() };
+      } else {
+        const q = query(colRef, where("id", "==", id));
+        const querySnap = await getDocs(q);
+        if (!querySnap.empty) {
+          const firstDoc = querySnap.docs[0];
+          return { id: firstDoc.id, ...firstDoc.data() };
+        }
+        return null;
+      }
     },
     put: async (data) => {
       if (data.id) {
-        await setDoc(doc(firestore, collectionName, data.id), data);
+        await setDoc(doc(firestore, collectionName, String(data.id)), data);
       } else {
         await addDoc(colRef, data);
       }
@@ -151,7 +196,7 @@ const createTable = (collectionName) => {
       const batch = [];
       for (const item of arr) {
         if (item.id) {
-          batch.push(setDoc(doc(firestore, collectionName, item.id), item));
+          batch.push(setDoc(doc(firestore, collectionName, String(item.id)), item));
         } else {
           batch.push(addDoc(colRef, item));
         }
