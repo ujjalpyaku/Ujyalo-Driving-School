@@ -21,8 +21,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const [ledgerTab, setLedgerTab] = useState('statement');
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '' });
-  const [cancelConfirm, setCancelConfirm] = useState({ show: false, id: null, name: '', date: '' });
+  const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
   
   // Quick Action Sub-Modals
   const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
@@ -622,38 +621,42 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   };
 
   // Delete student
+  // Delete student
   const handleDeleteStudentClick = (studentId, studentName) => {
-    setDeleteConfirm({ show: true, id: studentId, name: studentName });
-  };
+    setConfirmState({
+      show: true,
+      title: 'Confirm Deletion',
+      message: `Are you sure you want to delete ${studentName}? All associated bookings and payments will be moved to trash and can be restored later.`,
+      onConfirm: async () => {
+        try {
+          const studentData = await db.students.get(studentId);
+          if (studentData) {
+            const linkedBookings = await db.bookings.where('studentId').equals(studentId).toArray();
+            const linkedPayments = await db.payments.where('studentId').equals(studentId).toArray();
+            await db.trash.add({
+              id: studentId,
+              type: 'student',
+              data: {
+                student: studentData,
+                bookings: linkedBookings,
+                payments: linkedPayments
+              },
+              deletedAt: new Date().toISOString()
+            });
 
-  const handleConfirmDeleteStudent = async () => {
-    const studentId = deleteConfirm.id;
-    setDeleteConfirm({ show: false, id: null, name: '' });
-    try {
-      const studentData = await db.students.get(studentId);
-      if (studentData) {
-        const linkedBookings = await db.bookings.where('studentId').equals(studentId).toArray();
-        const linkedPayments = await db.payments.where('studentId').equals(studentId).toArray();
-        await db.trash.add({
-          id: studentId,
-          type: 'student',
-          data: {
-            student: studentData,
-            bookings: linkedBookings,
-            payments: linkedPayments
-          },
-          deletedAt: new Date().toISOString()
-        });
-
-        await db.students.delete(studentId);
-        await Promise.all(linkedBookings.map(b => db.bookings.delete(b.id)));
-        await Promise.all(linkedPayments.map(p => db.payments.delete(p.id)));
-        setSelectedStudentId(null);
-      }
-    } catch (err) {
-      console.error("Failed to delete student:", err);
-      alert("Error deleting student: " + err.message);
-    }
+            await db.students.delete(studentId);
+            await Promise.all(linkedBookings.map(b => db.bookings.delete(b.id)));
+            await Promise.all(linkedPayments.map(p => db.payments.delete(p.id)));
+            setSelectedStudentId(null);
+          }
+        } catch (err) {
+          console.error("Failed to delete student:", err);
+          alert("Error deleting student: " + err.message);
+        }
+      },
+      confirmText: 'Delete',
+      isDanger: true
+    });
   };
 
   const handleEditPhotoUpload = async (e) => {
@@ -870,18 +873,21 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
 
   // Cancel Booking
   const handleCancelBookingClick = (bookingId, studentName, date) => {
-    setCancelConfirm({ show: true, id: bookingId, name: studentName, date });
-  };
-
-  const handleConfirmCancelBooking = async () => {
-    const { id } = cancelConfirm;
-    setCancelConfirm({ show: false, id: null, name: '', date: '' });
-    try {
-      await db.bookings.update(id, { status: 'cancelled' });
-    } catch (err) {
-      console.error("Failed to cancel booking:", err);
-      alert("Error cancelling booking: " + err.message);
-    }
+    setConfirmState({
+      show: true,
+      title: 'Cancel Booking',
+      message: `Are you sure you want to cancel the booking for ${studentName} on ${date}?`,
+      onConfirm: async () => {
+        try {
+          await db.bookings.update(bookingId, { status: 'cancelled' });
+        } catch (err) {
+          console.error("Failed to cancel booking:", err);
+          alert("Error cancelling booking: " + err.message);
+        }
+      },
+      confirmText: 'Cancel Booking',
+      isDanger: true
+    });
   };
 
   // Reinstate Booking
@@ -898,9 +904,21 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       return;
     }
 
-    if (window.confirm(`Are you sure you want to reinstate the booking for ${studentName} on ${date}?`)) {
-      await db.bookings.update(bookingId, { status: 'scheduled' });
-    }
+    setConfirmState({
+      show: true,
+      title: 'Reinstate Booking',
+      message: `Are you sure you want to reinstate the booking for ${studentName} on ${date}?`,
+      onConfirm: async () => {
+        try {
+          await db.bookings.update(bookingId, { status: 'scheduled' });
+        } catch (err) {
+          console.error("Failed to reinstate booking:", err);
+          alert("Error reinstating booking: " + err.message);
+        }
+      },
+      confirmText: 'Reinstate',
+      isDanger: false
+    });
   };
 
   // Edit Payment handlers
@@ -1564,24 +1582,48 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                               <button 
                                 className="btn btn-secondary btn-sm"
                                 style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: 'var(--danger)' }}
-                                onClick={async () => {
+                                onClick={() => {
                                   if (item.type === 'charge') {
-                                    if (window.confirm(`Are you sure you want to delete this booking on ${item.date}?`)) {
-                                      const bookingData = await db.bookings.get(item.id);
-                                      if (bookingData) {
-                                        await db.trash.add({
-                                          id: item.id,
-                                          type: 'booking',
-                                          data: bookingData,
-                                          deletedAt: new Date().toISOString()
-                                        });
-                                      }
-                                      await db.bookings.delete(item.id);
-                                    }
+                                    setConfirmState({
+                                      show: true,
+                                      title: 'Delete Booking',
+                                      message: `Are you sure you want to delete this booking on ${item.date}?`,
+                                      onConfirm: async () => {
+                                        try {
+                                          const bookingData = await db.bookings.get(item.id);
+                                          if (bookingData) {
+                                            await db.trash.add({
+                                              id: item.id,
+                                              type: 'booking',
+                                              data: bookingData,
+                                              deletedAt: new Date().toISOString()
+                                            });
+                                          }
+                                          await db.bookings.delete(item.id);
+                                        } catch (err) {
+                                          console.error("Failed to delete booking from ledger:", err);
+                                          alert("Error deleting booking: " + err.message);
+                                        }
+                                      },
+                                      confirmText: 'Delete',
+                                      isDanger: true
+                                    });
                                   } else {
-                                    if (window.confirm(`Are you sure you want to delete this payment of $${item.amount.toFixed(2)}?`)) {
-                                      await db.payments.delete(item.id);
-                                    }
+                                    setConfirmState({
+                                      show: true,
+                                      title: 'Delete Payment',
+                                      message: `Are you sure you want to delete this payment of $${item.amount.toFixed(2)}?`,
+                                      onConfirm: async () => {
+                                        try {
+                                          await db.payments.delete(item.id);
+                                        } catch (err) {
+                                          console.error("Failed to delete payment from ledger:", err);
+                                          alert("Error deleting payment: " + err.message);
+                                        }
+                                      },
+                                      confirmText: 'Delete',
+                                      isDanger: true
+                                    });
                                   }
                                 }}
                               >
@@ -2752,8 +2794,8 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirm.show && (
+      {/* Generic Confirmation Modal */}
+      {confirmState.show && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -2766,7 +2808,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 10000,
           padding: '1rem'
         }}>
           <div className="card" style={{
@@ -2781,77 +2823,29 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
             flexDirection: 'column',
             gap: '1.25rem'
           }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Confirm Deletion</h3>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              {confirmState.title}
+            </h3>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-              Are you sure you want to delete <strong>{deleteConfirm.name}</strong>? All associated bookings and payments will be moved to trash and can be restored later.
+              {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
               <button 
                 className="btn btn-secondary" 
-                onClick={() => setDeleteConfirm({ show: false, id: null, name: '' })}
+                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
                 style={{ padding: '0.5rem 1rem' }}
               >
-                Cancel
+                {confirmState.cancelText || 'Cancel'}
               </button>
               <button 
-                className="btn btn-danger" 
-                onClick={handleConfirmDeleteStudent}
+                className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
+                onClick={() => {
+                  confirmState.onConfirm();
+                  setConfirmState(prev => ({ ...prev, show: false }));
+                }}
                 style={{ padding: '0.5rem 1rem' }}
               >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cancel Confirmation Modal */}
-      {cancelConfirm.show && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.4)',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '1rem'
-        }}>
-          <div className="card" style={{
-            maxWidth: '420px',
-            width: '100%',
-            padding: '1.75rem',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-lg)',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.25rem'
-          }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Cancel Booking</h3>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-              Are you sure you want to cancel the booking for <strong>{cancelConfirm.name}</strong> on <strong>{cancelConfirm.date}</strong>?
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setCancelConfirm({ show: false, id: null, name: '', date: '' })}
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                No, Keep It
-              </button>
-              <button 
-                className="btn btn-danger" 
-                onClick={handleConfirmCancelBooking}
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                Yes, Cancel Booking
+                {confirmState.confirmText || 'Confirm'}
               </button>
             </div>
           </div>

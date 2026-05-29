@@ -19,7 +19,7 @@ export default function Bookings() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [timelineFilter, setTimelineFilter] = useState('all');
   const [isAddBookingOpen, setIsAddBookingOpen] = useState(false);
-  const [cancelConfirm, setCancelConfirm] = useState({ show: false, id: null, name: '', date: '' });
+  const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [ebStudentSearchQuery, setEbStudentSearchQuery] = useState('');
 
@@ -347,35 +347,50 @@ export default function Bookings() {
   };
 
   // Delete Booking
-  const handleDeleteBooking = async (bookingId, studentName, date) => {
-    if (window.confirm(`Are you sure you want to delete the booking for ${studentName} on ${date}?`)) {
-      const bookingData = await db.bookings.get(bookingId);
-      if (bookingData) {
-        await db.trash.add({
-          id: bookingId,
-          type: 'booking',
-          data: bookingData,
-          deletedAt: new Date().toISOString()
-        });
-      }
-      await db.bookings.delete(bookingId);
-    }
+  const handleDeleteBooking = (bookingId, studentName, date) => {
+    setConfirmState({
+      show: true,
+      title: 'Delete Booking',
+      message: `Are you sure you want to delete the booking for ${studentName} on ${date}?`,
+      onConfirm: async () => {
+        try {
+          const bookingData = await db.bookings.get(bookingId);
+          if (bookingData) {
+            await db.trash.add({
+              id: bookingId,
+              type: 'booking',
+              data: bookingData,
+              deletedAt: new Date().toISOString()
+            });
+          }
+          await db.bookings.delete(bookingId);
+        } catch (err) {
+          console.error("Failed to delete booking:", err);
+          alert("Error deleting booking: " + err.message);
+        }
+      },
+      confirmText: 'Delete',
+      isDanger: true
+    });
   };
 
   // Cancel Booking
   const handleCancelBookingClick = (bookingId, studentName, date) => {
-    setCancelConfirm({ show: true, id: bookingId, name: studentName, date });
-  };
-
-  const handleConfirmCancelBooking = async () => {
-    const { id } = cancelConfirm;
-    setCancelConfirm({ show: false, id: null, name: '', date: '' });
-    try {
-      await db.bookings.update(id, { status: 'cancelled' });
-    } catch (err) {
-      console.error("Failed to cancel booking:", err);
-      alert("Error cancelling booking: " + err.message);
-    }
+    setConfirmState({
+      show: true,
+      title: 'Cancel Booking',
+      message: `Are you sure you want to cancel the booking for ${studentName} on ${date}?`,
+      onConfirm: async () => {
+        try {
+          await db.bookings.update(bookingId, { status: 'cancelled' });
+        } catch (err) {
+          console.error("Failed to cancel booking:", err);
+          alert("Error cancelling booking: " + err.message);
+        }
+      },
+      confirmText: 'Cancel Booking',
+      isDanger: true
+    });
   };
 
   // Reinstate Booking
@@ -392,9 +407,21 @@ export default function Bookings() {
       return;
     }
 
-    if (window.confirm(`Are you sure you want to reinstate the booking for ${studentName} on ${date}?`)) {
-      await db.bookings.update(bookingId, { status: 'scheduled' });
-    }
+    setConfirmState({
+      show: true,
+      title: 'Reinstate Booking',
+      message: `Are you sure you want to reinstate the booking for ${studentName} on ${date}?`,
+      onConfirm: async () => {
+        try {
+          await db.bookings.update(bookingId, { status: 'scheduled' });
+        } catch (err) {
+          console.error("Failed to reinstate booking:", err);
+          alert("Error reinstating booking: " + err.message);
+        }
+      },
+      confirmText: 'Reinstate',
+      isDanger: false
+    });
   };
 
   // Filter Bookings
@@ -937,8 +964,8 @@ export default function Bookings() {
         </Modal>
       )}
 
-      {/* Cancel Confirmation Modal */}
-      {cancelConfirm.show && (
+      {/* Generic Confirmation Modal */}
+      {confirmState.show && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -951,7 +978,7 @@ export default function Bookings() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 10000,
           padding: '1rem'
         }}>
           <div className="card" style={{
@@ -966,24 +993,29 @@ export default function Bookings() {
             flexDirection: 'column',
             gap: '1.25rem'
           }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Cancel Booking</h3>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              {confirmState.title}
+            </h3>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-              Are you sure you want to cancel the booking for <strong>{cancelConfirm.name}</strong> on <strong>{cancelConfirm.date}</strong>?
+              {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
               <button 
                 className="btn btn-secondary" 
-                onClick={() => setCancelConfirm({ show: false, id: null, name: '', date: '' })}
+                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
                 style={{ padding: '0.5rem 1rem' }}
               >
-                No, Keep It
+                {confirmState.cancelText || 'Cancel'}
               </button>
               <button 
-                className="btn btn-danger" 
-                onClick={handleConfirmCancelBooking}
+                className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
+                onClick={() => {
+                  confirmState.onConfirm();
+                  setConfirmState(prev => ({ ...prev, show: false }));
+                }}
                 style={{ padding: '0.5rem 1rem' }}
               >
-                Yes, Cancel Booking
+                {confirmState.confirmText || 'Confirm'}
               </button>
             </div>
           </div>

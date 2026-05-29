@@ -16,26 +16,39 @@ const formatTime12Hour = (timeStr) => {
 export default function Trash() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
 
   const trashItems = useLiveQuery(() => db.trash.toArray()) || [];
 
   const handleRestore = async (item) => {
     try {
       if (item.type === 'student') {
-        if (window.confirm(`Are you sure you want to restore the student profile for "${item.data.student.name}" along with all their linked bookings and payments?`)) {
-          // Restore student
-          await db.students.put(item.data.student);
-          // Restore bookings
-          if (item.data.bookings && item.data.bookings.length > 0) {
-            await Promise.all(item.data.bookings.map(b => db.bookings.put(b)));
-          }
-          // Restore payments
-          if (item.data.payments && item.data.payments.length > 0) {
-            await Promise.all(item.data.payments.map(p => db.payments.put(p)));
-          }
-          // Delete from trash
-          await db.trash.delete(item.id);
-        }
+        setConfirmState({
+          show: true,
+          title: 'Restore Student Profile',
+          message: `Are you sure you want to restore the student profile for "${item.data.student.name}" along with all their linked bookings and payments?`,
+          onConfirm: async () => {
+            try {
+              // Restore student
+              await db.students.put(item.data.student);
+              // Restore bookings
+              if (item.data.bookings && item.data.bookings.length > 0) {
+                await Promise.all(item.data.bookings.map(b => db.bookings.put(b)));
+              }
+              // Restore payments
+              if (item.data.payments && item.data.payments.length > 0) {
+                await Promise.all(item.data.payments.map(p => db.payments.put(p)));
+              }
+              // Delete from trash
+              await db.trash.delete(item.id);
+            } catch (err) {
+              console.error("Failed to restore student profile:", err);
+              alert("Error restoring student: " + err.message);
+            }
+          },
+          confirmText: 'Restore',
+          isDanger: false
+        });
       } else if (item.type === 'booking') {
         const booking = item.data;
         
@@ -59,15 +72,39 @@ export default function Trash() {
           return;
         }
 
-        if (window.confirm(`Are you sure you want to restore the booking for "${booking.studentName}" on ${booking.date}?`)) {
-          await db.bookings.put(booking);
-          await db.trash.delete(item.id);
-        }
+        setConfirmState({
+          show: true,
+          title: 'Restore Booking',
+          message: `Are you sure you want to restore the booking for "${booking.studentName}" on ${booking.date}?`,
+          onConfirm: async () => {
+            try {
+              await db.bookings.put(booking);
+              await db.trash.delete(item.id);
+            } catch (err) {
+              console.error("Failed to restore booking:", err);
+              alert("Error restoring booking: " + err.message);
+            }
+          },
+          confirmText: 'Restore',
+          isDanger: false
+        });
       } else if (item.type === 'enquiry') {
-        if (window.confirm(`Are you sure you want to restore the booking inquiry from "${item.data.name}"?`)) {
-          await db.inquiries.put(item.data);
-          await db.trash.delete(item.id);
-        }
+        setConfirmState({
+          show: true,
+          title: 'Restore Enquiry',
+          message: `Are you sure you want to restore the booking inquiry from "${item.data.name}"?`,
+          onConfirm: async () => {
+            try {
+              await db.inquiries.put(item.data);
+              await db.trash.delete(item.id);
+            } catch (err) {
+              console.error("Failed to restore enquiry:", err);
+              alert("Error restoring enquiry: " + err.message);
+            }
+          },
+          confirmText: 'Restore',
+          isDanger: false
+        });
       }
     } catch (err) {
       console.error("Failed to restore item:", err);
@@ -75,32 +112,46 @@ export default function Trash() {
     }
   };
 
-  const handlePermanentDelete = async (item) => {
+  const handlePermanentDelete = (item) => {
     const confirmationMsg = item.type === 'student' 
       ? `Are you sure you want to PERMANENTLY delete "${item.data.student.name}" and all historical bookings/payments? This action is irreversible.`
       : item.type === 'enquiry'
         ? `Are you sure you want to PERMANENTLY delete this booking inquiry from "${item.data.name}"? This action is irreversible.`
         : `Are you sure you want to PERMANENTLY delete this booking slot for "${item.data.studentName}"? This action is irreversible.`;
 
-    if (window.confirm(confirmationMsg)) {
-      try {
-        await db.trash.delete(item.id);
-      } catch (err) {
-        console.error("Failed to purge item:", err);
-        alert("Error purging item: " + err.message);
-      }
-    }
+    setConfirmState({
+      show: true,
+      title: 'Permanently Delete Record',
+      message: confirmationMsg,
+      onConfirm: async () => {
+        try {
+          await db.trash.delete(item.id);
+        } catch (err) {
+          console.error("Failed to purge item:", err);
+          alert("Error purging item: " + err.message);
+        }
+      },
+      confirmText: 'Delete Permanently',
+      isDanger: true
+    });
   };
 
-  const handleEmptyTrash = async () => {
-    if (window.confirm("Are you sure you want to permanently delete all items in the Trash? This action is irreversible.")) {
-      try {
-        await db.trash.clear();
-      } catch (err) {
-        console.error("Failed to empty trash:", err);
-        alert("Error emptying trash: " + err.message);
-      }
-    }
+  const handleEmptyTrash = () => {
+    setConfirmState({
+      show: true,
+      title: 'Empty Recycle Bin',
+      message: 'Are you sure you want to permanently delete all items in the Trash? This action is irreversible.',
+      onConfirm: async () => {
+        try {
+          await db.trash.clear();
+        } catch (err) {
+          console.error("Failed to empty trash:", err);
+          alert("Error emptying trash: " + err.message);
+        }
+      },
+      confirmText: 'Empty Trash',
+      isDanger: true
+    });
   };
 
   // Filtering list items
@@ -265,6 +316,64 @@ export default function Trash() {
           </div>
         )}
       </div>
+      
+      {/* Generic Confirmation Modal */}
+      {confirmState.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '1.75rem',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              {confirmState.title}
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+              {confirmState.message}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                {confirmState.cancelText || 'Cancel'}
+              </button>
+              <button 
+                className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
+                onClick={() => {
+                  confirmState.onConfirm();
+                  setConfirmState(prev => ({ ...prev, show: false }));
+                }}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                {confirmState.confirmText || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

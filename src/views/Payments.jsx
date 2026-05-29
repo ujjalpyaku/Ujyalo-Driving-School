@@ -8,6 +8,7 @@ export default function Payments() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null });
 
   // Form states
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -106,10 +107,22 @@ export default function Payments() {
   };
 
   // Delete Payment
-  const handleDeletePayment = async (paymentId, studentName, amount) => {
-    if (window.confirm(`Are you sure you want to delete this payment of $${amount.toFixed(2)} from ${studentName}?`)) {
-      await db.payments.delete(paymentId);
-    }
+  const handleDeletePayment = (paymentId, studentName, amount) => {
+    setConfirmState({
+      show: true,
+      title: 'Delete Payment',
+      message: `Are you sure you want to delete this payment of $${amount.toFixed(2)} from ${studentName}?`,
+      onConfirm: async () => {
+        try {
+          await db.payments.delete(paymentId);
+        } catch (err) {
+          console.error("Failed to delete payment:", err);
+          alert("Error deleting payment: " + err.message);
+        }
+      },
+      confirmText: 'Delete',
+      isDanger: true
+    });
   };
 
   // Filter payments
@@ -402,6 +415,64 @@ export default function Payments() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Generic Confirmation Modal */}
+      {confirmState.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '1.75rem',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              {confirmState.title}
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+              {confirmState.message}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                {confirmState.cancelText || 'Cancel'}
+              </button>
+              <button 
+                className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
+                onClick={() => {
+                  confirmState.onConfirm();
+                  setConfirmState(prev => ({ ...prev, show: false }));
+                }}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                {confirmState.confirmText || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
