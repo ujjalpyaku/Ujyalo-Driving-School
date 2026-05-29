@@ -31,6 +31,7 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
   const [calculatedDuration, setCalculatedDuration] = useState(0);
   const [estimatedPrice, setEstimatedPrice] = useState(0);
   const [selectedStudentDiscount, setSelectedStudentDiscount] = useState({ classDisc: 0, testDisc: 0 });
+  const [cancelConfirm, setCancelConfirm] = useState({ show: false, id: null, name: '', date: '' });
   
   // Fetch database entries
   const students = useLiveQuery(() => db.students.toArray()) || [];
@@ -111,10 +112,19 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
     setCurrentWeekDate(newDate => new Date());
   };
 
-  const handleCancelBooking = async (bookingId, studentName, date) => {
-    if (window.confirm(`Are you sure you want to cancel the booking for ${studentName} on ${date}?`)) {
-      await db.bookings.update(bookingId, { status: 'cancelled' });
+  const handleCancelBookingClick = (bookingId, studentName, date) => {
+    setCancelConfirm({ show: true, id: bookingId, name: studentName, date });
+  };
+
+  const handleConfirmCancelBooking = async () => {
+    const { id } = cancelConfirm;
+    setCancelConfirm({ show: false, id: null, name: '', date: '' });
+    try {
+      await db.bookings.update(id, { status: 'cancelled' });
       setSelectedBooking(null);
+    } catch (err) {
+      console.error("Failed to cancel booking:", err);
+      alert("Error cancelling booking: " + err.message);
     }
   };
 
@@ -990,7 +1000,7 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
                 <button 
                   className="btn btn-secondary" 
                   style={{ color: 'var(--warning)', borderColor: 'var(--warning)' }}
-                  onClick={() => handleCancelBooking(selectedBooking.id, selectedBooking.studentName, selectedBooking.date)}
+                  onClick={() => handleCancelBookingClick(selectedBooking.id, selectedBooking.studentName, selectedBooking.date)}
                 >
                   Cancel Booking
                 </button>
@@ -1161,6 +1171,59 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {cancelConfirm.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '1.75rem',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Cancel Booking</h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+              Are you sure you want to cancel the booking for <strong>{cancelConfirm.name}</strong> on <strong>{cancelConfirm.date}</strong>?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setCancelConfirm({ show: false, id: null, name: '', date: '' })}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                No, Keep It
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={handleConfirmCancelBooking}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                Yes, Cancel Booking
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
