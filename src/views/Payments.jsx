@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from '../db';
 import { db } from '../db';
 import { Search, Plus, CreditCard, Calendar, Trash2, DollarSign, Edit2 } from 'lucide-react';
@@ -24,6 +24,35 @@ export default function Payments() {
   const [epDate, setEpDate] = useState('');
   const [epAmount, setEpAmount] = useState('');
   const [epType, setEpType] = useState('bank');
+  
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const [editStudentSearchTerm, setEditStudentSearchTerm] = useState('');
+
+  // Reset search terms when modals open/close
+  useEffect(() => {
+    if (!isAddPaymentOpen) {
+      setStudentSearchTerm('');
+    }
+  }, [isAddPaymentOpen]);
+
+  useEffect(() => {
+    if (!isEditPaymentOpen) {
+      setEditStudentSearchTerm('');
+    }
+  }, [isEditPaymentOpen]);
+
+  // Filter students lists
+  const filteredStudentsForSelect = students.filter(s => {
+    if (s.id === selectedStudentId) return true;
+    return s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+           s.phone.includes(studentSearchTerm);
+  });
+
+  const filteredStudentsForEditSelect = students.filter(s => {
+    if (s.id === epStudentId) return true;
+    return s.name.toLowerCase().includes(editStudentSearchTerm.toLowerCase()) ||
+           s.phone.includes(editStudentSearchTerm);
+  });
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'descending' });
@@ -307,6 +336,16 @@ export default function Payments() {
           <form onSubmit={handleAddPaymentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             
             <div className="form-group">
+              <label htmlFor="studentSearch">Search Student</label>
+              <input 
+                id="studentSearch"
+                type="text"
+                placeholder="Type name or phone number..."
+                className="form-control"
+                value={studentSearchTerm}
+                onChange={(e) => setStudentSearchTerm(e.target.value)}
+                style={{ marginBottom: '0.5rem' }}
+              />
               <label htmlFor="studentSelect">Select Student *</label>
               <select 
                 id="studentSelect"
@@ -315,8 +354,10 @@ export default function Payments() {
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
               >
-                <option value="">-- Choose a student profile --</option>
-                {students.map(s => (
+                <option value="">
+                  {filteredStudentsForSelect.length === 0 ? '-- No students match search --' : '-- Choose a student profile --'}
+                </option>
+                {filteredStudentsForSelect.map(s => (
                   <option key={s.id} value={s.id}>{s.name} ({s.phone})</option>
                 ))}
               </select>
@@ -376,6 +417,16 @@ export default function Payments() {
           <form onSubmit={handleEditPaymentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             
             <div className="form-group">
+              <label htmlFor="editstudentSearch">Search Student</label>
+              <input 
+                id="editstudentSearch"
+                type="text"
+                placeholder="Type name or phone number..."
+                className="form-control"
+                value={editStudentSearchTerm}
+                onChange={(e) => setEditStudentSearchTerm(e.target.value)}
+                style={{ marginBottom: '0.5rem' }}
+              />
               <label htmlFor="ebstudentSelect">Select Student *</label>
               <select 
                 id="ebstudentSelect"
@@ -384,8 +435,10 @@ export default function Payments() {
                 value={epStudentId}
                 onChange={(e) => setEpStudentId(e.target.value)}
               >
-                <option value="">-- Choose a student profile --</option>
-                {students.map(s => (
+                <option value="">
+                  {filteredStudentsForEditSelect.length === 0 ? '-- No students match search --' : '-- Choose a student profile --'}
+                </option>
+                {filteredStudentsForEditSelect.map(s => (
                   <option key={s.id} value={s.id}>{s.name} ({s.phone})</option>
                 ))}
               </select>
