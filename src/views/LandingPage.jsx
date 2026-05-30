@@ -15,7 +15,8 @@ import {
   Clock, 
   UserCheck,
   Sun,
-  Moon
+  Moon,
+  AlertCircle
 } from 'lucide-react';
 
 export default function LandingPage({ theme, toggleTheme }) {
@@ -24,6 +25,8 @@ export default function LandingPage({ theme, toggleTheme }) {
   const [inquiryCourse, setInquiryCourse] = useState('Beginner Course (No experience)');
   const [inquiryMsg, setInquiryMsg] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState({ show: false, message: '' });
 
   // Fetch settings dynamically from database
   const pricingSettings = useLiveQuery(() => db.settings.get('pricing'));
@@ -62,10 +65,10 @@ export default function LandingPage({ theme, toggleTheme }) {
         setInquiryCourse('Beginner Course (No experience)');
         setInquiryMsg('');
         setSubmitted(false);
-        alert('Thank you for your booking request! We will contact you shortly to confirm your scheduled driving lesson.');
+        setShowSuccessModal(true);
       }, 600);
     } catch (err) {
-      alert('Failed to submit booking request: ' + err.message);
+      setShowErrorModal({ show: true, message: err.message });
       setSubmitted(false);
     }
   };
@@ -692,6 +695,128 @@ export default function LandingPage({ theme, toggleTheme }) {
           </div>
         </div>
       </footer>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '1.25rem'
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              color: 'var(--success)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '0.25rem'
+            }}>
+              <CheckCircle size={36} />
+            </div>
+            <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+              Inquiry Submitted!
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+              Thank you for your booking request! We will contact you shortly to confirm your scheduled driving lesson.
+            </p>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setShowSuccessModal(false)}
+              style={{ width: '100%', padding: '0.75rem', justifyContent: 'center', fontWeight: 600, marginTop: '0.5rem' }}
+            >
+              Great, thank you!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '1.25rem'
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: 'var(--danger)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '0.25rem'
+            }}>
+              <AlertCircle size={36} />
+            </div>
+            <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+              Submission Failed
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+              {showErrorModal.message}
+            </p>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setShowErrorModal({ show: false, message: '' })}
+              style={{ width: '100%', padding: '0.75rem', justifyContent: 'center', fontWeight: 600, marginTop: '0.5rem' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
