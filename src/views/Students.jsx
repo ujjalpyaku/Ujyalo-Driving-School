@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from '../db';
 import { db } from '../db';
-import { Search, Plus, User, Phone, Check, Eye, Trash2, Calendar, CreditCard, ArrowLeft, Image as ImageIcon, Pencil, Printer, Download, Mars, Venus, Ban, RotateCcw } from 'lucide-react';
+import { Search, Plus, User, Phone, Eye, Trash2, Calendar, CreditCard, ArrowLeft, Pencil, Printer, Download, Mars, Venus, RotateCcw } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -21,7 +21,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const [selectedDays, setSelectedDays] = useState([]);
   const [ledgerTab, setLedgerTab] = useState('statement');
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
-  const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
   
   const showAlert = (title, message, isDanger = false) => {
@@ -43,18 +42,12 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newGender, setNewGender] = useState('Male');
-  const [newAvailability, setNewAvailability] = useState('');
   const [newClassDiscount, setNewClassDiscount] = useState(0);
   const [newTestDiscount, setNewTestDiscount] = useState(0);
-  const [newLicencePhoto, setNewLicencePhoto] = useState('');
   const [newTestDate, setNewTestDate] = useState('');
   const [newTestTime, setNewTestTime] = useState('');
   const [newStatus, setNewStatus] = useState('active');
   const [newNotes, setNewNotes] = useState('');
-  const [compressing, setCompressing] = useState(false);
-  
-  const fileInputRef = useRef(null);
-  const editFileInputRef = useRef(null);
 
   // Form states for Quick Booking
   const [bDate, setBDate] = useState('');
@@ -75,7 +68,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const [editAvailability, setEditAvailability] = useState('');
   const [editClassDiscount, setEditClassDiscount] = useState(0);
   const [editTestDiscount, setEditTestDiscount] = useState(0);
-  const [editLicencePhoto, setEditLicencePhoto] = useState('');
   const [editTestDate, setEditTestDate] = useState('');
   const [editTestTime, setEditTestTime] = useState('');
   const [editStatus, setEditStatus] = useState('active');
@@ -102,10 +94,10 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   });
 
   const isNewPhoneDirty = newPhone.length > 0;
-  const isNewPhoneInvalid = isNewPhoneDirty && !/^(?:\+?61|0)4\d{8}$/.test(newPhone.replace(/[\s\-\(\)]/g, ''));
+  const isNewPhoneInvalid = isNewPhoneDirty && !/^(?:\+?61|0)4\d{8}$/.test(newPhone.replace(/[\s\-()]/g, ''));
 
   const isEditPhoneDirty = editPhone.length > 0;
-  const isEditPhoneInvalid = isEditPhoneDirty && !/^(?:\+?61|0)4\d{8}$/.test(editPhone.replace(/[\s\-\(\)]/g, ''));
+  const isEditPhoneInvalid = isEditPhoneDirty && !/^(?:\+?61|0)4\d{8}$/.test(editPhone.replace(/[\s\-()]/g, ''));
 
   const buildAvailString = (availObj) => {
     const parts = [];
@@ -181,59 +173,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const rates = pricingSettings || { normalRate: 63, packageRate: 63, testRate: 210 };
   const schoolContact = schoolDetails || { phone: '+61 400 000 000', email: 'info@ujyalodriving.com.au' };
 
-  // Image compressor tool
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    setCompressing(true);
-    try {
-      const compressedBase64 = await compressImage(file);
-      setNewLicencePhoto(compressedBase64);
-    } catch (err) {
-      showAlert('Compression Error', 'Error reading/compressing photo: ' + err.message, true);
-    } finally {
-      setCompressing(false);
-    }
-  };
-
-  const compressImage = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const maxDim = 800; // max width/height
-          let width = img.width;
-          let height = img.height;
-
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // compress as medium quality JPEG
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          resolve(dataUrl);
-        };
-        img.onerror = reject;
-      };
-      reader.onerror = reject;
-    });
-  };
 
   // Submit Add Student
   const handleAddStudentSubmit = async (e) => {
@@ -250,7 +190,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       return;
     }
 
-    const cleanPhone = newPhone.replace(/[\s\-\(\)]/g, '');
+    const cleanPhone = newPhone.replace(/[\s\-()]/g, '');
     const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
     if (!phoneRegex.test(cleanPhone)) {
       setConfirmState({
@@ -280,7 +220,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       availability: buildAvailString(newAvail),
       classRateDiscount: Number(newClassDiscount) || 0,
       testRateDiscount: Number(newTestDiscount) || 0,
-      licencePhoto: newLicencePhoto,
       testDate: newTestDate || '',
       testTime: newTestTime || '',
       status: newStatus,
@@ -293,7 +232,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     setNewPhone('');
     setNewGender('Male');
     setNewNotes('');
-    setNewAvailability('');
     setNewAvail({
       Monday: { morning: false, afternoon: false },
       Tuesday: { morning: false, afternoon: false },
@@ -305,7 +243,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     });
     setNewClassDiscount(0);
     setNewTestDiscount(0);
-    setNewLicencePhoto('');
     setNewTestDate('');
     setNewTestTime('');
     setNewStatus('active');
@@ -605,12 +542,9 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     }
 
     // total price calc
-    let totalPrice = 0;
-    if (bType === 'test') {
-      totalPrice = Math.max(0, rateCharged - discountApplied);
-    } else {
-      totalPrice = Math.max(0, duration * (rateCharged - discountApplied));
-    }
+    const totalPrice = bType === 'test'
+      ? Math.max(0, rateCharged - discountApplied)
+      : Math.max(0, duration * (rateCharged - discountApplied));
 
     await db.bookings.add({
       id: crypto.randomUUID(),
@@ -699,20 +633,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     });
   };
 
-  const handleEditPhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    setCompressing(true);
-    try {
-      const compressedBase64 = await compressImage(file);
-      setEditLicencePhoto(compressedBase64);
-    } catch (err) {
-      showAlert('Compression Error', 'Error reading/compressing photo: ' + err.message, true);
-    } finally {
-      setCompressing(false);
-    }
-  };
 
   const openEditStudentModal = () => {
     setEditName(activeStudent.name);
@@ -722,7 +643,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     setEditAvail(parseAvailString(activeStudent.availability));
     setEditClassDiscount(activeStudent.classRateDiscount || 0);
     setEditTestDiscount(activeStudent.testRateDiscount || 0);
-    setEditLicencePhoto(activeStudent.licencePhoto || '');
     setEditTestDate(activeStudent.testDate || '');
     setEditTestTime(activeStudent.testTime || '');
     setEditStatus(activeStudent.status || 'active');
@@ -752,7 +672,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     setEditAvail(parseAvailString(student.availability || ''));
     setEditClassDiscount(student.classRateDiscount || 0);
     setEditTestDiscount(student.testRateDiscount || 0);
-    setEditLicencePhoto(student.licencePhoto || '');
     setEditTestDate(student.testDate || '');
     setEditTestTime(student.testTime || '');
     setEditStatus(student.status || 'active');
@@ -774,7 +693,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       return;
     }
 
-    const cleanPhone = editPhone.replace(/[\s\-\(\)]/g, '');
+    const cleanPhone = editPhone.replace(/[\s\-()]/g, '');
     const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
     if (!phoneRegex.test(cleanPhone)) {
       setConfirmState({
@@ -806,7 +725,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       availability: buildAvailString(editAvail),
       classRateDiscount: Number(editClassDiscount) || 0,
       testRateDiscount: Number(editTestDiscount) || 0,
-      licencePhoto: editLicencePhoto,
       testDate: editTestDate || '',
       testTime: editTestTime || '',
       status: editStatus,
@@ -885,12 +803,9 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     const duration = parseFloat((durationMin / 60).toFixed(2));
     setEbDuration(duration);
 
-    let price = 0;
-    if (ebType === 'test') {
-      price = Math.max(0, ebRateCharged - ebDiscountApplied);
-    } else {
-      price = Math.max(0, duration * (ebRateCharged - ebDiscountApplied));
-    }
+    const price = ebType === 'test'
+      ? Math.max(0, ebRateCharged - ebDiscountApplied)
+      : Math.max(0, duration * (ebRateCharged - ebDiscountApplied));
     setEbTotalPrice(price);
   }, [ebTimeFrom, ebTimeTo, ebType, ebRateCharged, ebDiscountApplied]);
 
@@ -1360,57 +1275,69 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
             </div>
           )}
 
-          <div className="split-layout" style={{ marginBottom: '1.5rem' }}>
-            {/* Student info and Licence preview */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '50%',
-                  background: 'var(--primary-light)',
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 'bold',
-                  fontSize: '1.5rem'
-                }}>
-                  {activeStudent.name.charAt(0)}
-                </div>
-                <div>
-                  <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{activeStudent.name}</h2>
-                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
-                    <span className="badge badge-primary">{activeStudent.gender}</span>
-                    <span className={`badge badge-${
-                      activeStudent.status === 'active' ? 'primary' :
-                      activeStudent.status === 'passed' ? 'success' :
-                      activeStudent.status === 'terminated' ? 'danger' :
-                      'warning'
-                    }`} style={{ textTransform: 'capitalize' }}>
-                      {activeStudent.status || 'active'}
-                    </span>
+            {/* Rearranged Student Profile Info Card */}
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    background: 'var(--primary-light)',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '1.5rem'
+                  }}>
+                    {activeStudent.name.charAt(0)}
                   </div>
+                  <div>
+                    <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{activeStudent.name}</h2>
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
+                      <span className="badge badge-primary">{activeStudent.gender}</span>
+                      <span className={`badge badge-${
+                        activeStudent.status === 'active' ? 'primary' :
+                        activeStudent.status === 'passed' ? 'success' :
+                        activeStudent.status === 'terminated' ? 'danger' :
+                        'warning'
+                      }`} style={{ textTransform: 'capitalize' }}>
+                        {activeStudent.status || 'active'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'var(--bg-hover)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                  <Phone size={16} color="var(--text-muted)" />
+                  <span style={{ fontWeight: 600 }}>{activeStudent.phone}</span>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <Phone size={16} color="var(--text-muted)" />
-                  <span>{activeStudent.phone}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                gap: '1.5rem', 
+                borderTop: '1px solid var(--border)', 
+                paddingTop: '1.25rem' 
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Availability:</span>
-                  <span style={{ fontSize: '0.95rem' }}>{activeStudent.availability}</span>
+                  <span style={{ fontSize: '0.95rem', lineHeight: '1.4' }}>{activeStudent.availability}</span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Scheduled Driving Test:</span>
                   {activeStudent.testDate ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
-                        {activeStudent.testDate} at {activeStudent.testTime || 'Not specified'} ({getDaysToTestStr(activeStudent.testDate)})
+                        {activeStudent.testDate} at {activeStudent.testTime || 'Not specified'}
                       </span>
-                      <span className={getPriorityInfo(activeStudent.testDate).class}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        ({getDaysToTestStr(activeStudent.testDate)})
+                      </span>
+                      <span className={getPriorityInfo(activeStudent.testDate).class} style={{ alignSelf: 'flex-start', marginTop: '0.15rem' }}>
                         {getPriorityInfo(activeStudent.testDate).text} Priority
                       </span>
                     </div>
@@ -1420,80 +1347,40 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                     </span>
                   )}
                 </div>
-                <div className="form-grid" style={{ gap: '0.75rem', marginTop: '0.25rem' }}>
-                  <div style={{ padding: '0.5rem', background: 'var(--bg-hover)', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Class Discount</span>
-                    <strong>${activeStudent.classRateDiscount}/hr off</strong>
-                  </div>
-                  <div style={{ padding: '0.5rem', background: 'var(--bg-hover)', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Test Discount</span>
-                    <strong>${activeStudent.testRateDiscount} off</strong>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.25rem' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Notes:</span>
-                  <div style={{ 
-                    fontSize: '0.9rem', 
-                    padding: '0.6rem 0.8rem', 
-                    background: 'var(--bg-hover)', 
-                    borderRadius: '8px', 
-                    border: '1px solid var(--border)',
-                    whiteSpace: 'pre-wrap',
-                    minHeight: '40px',
-                    color: activeStudent.notes ? 'var(--text-main)' : 'var(--text-muted)',
-                    fontStyle: activeStudent.notes ? 'normal' : 'italic'
-                  }}>
-                    {activeStudent.notes || 'No notes added for this student.'}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Lesson Pricing Discounts:</span>
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.1rem' }}>
+                    <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-hover)', borderRadius: '8px', border: '1px solid var(--border)', flex: 1 }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Class Discount</span>
+                      <strong style={{ fontSize: '0.9rem' }}>${activeStudent.classRateDiscount}/hr off</strong>
+                    </div>
+                    <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-hover)', borderRadius: '8px', border: '1px solid var(--border)', flex: 1 }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Test Discount</span>
+                      <strong style={{ fontSize: '0.9rem' }}>${activeStudent.testRateDiscount} off</strong>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Licence Photo view */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ImageIcon size={18} color="var(--primary)" /> Learner's Licence Photo
-              </h3>
-              {activeStudent.licencePhoto ? (
-                <div 
-                  className="licence-preview-container" 
-                  onClick={() => setIsZoomOpen(true)}
-                  style={{ border: 'none' }}
-                  title="Click to zoom photo"
-                >
-                  <img src={activeStudent.licencePhoto} alt="Licence" />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '8px',
-                    right: '8px',
-                    padding: '4px',
-                    background: 'rgba(0,0,0,0.6)',
-                    color: 'white',
-                    borderRadius: '50%',
-                    display: 'flex'
-                  }}>
-                    <Eye size={16} />
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Student Notes & Remarks:</span>
+                <div style={{ 
+                  fontSize: '0.9rem', 
+                  padding: '0.85rem 1rem', 
+                  background: 'var(--bg-hover)', 
+                  borderRadius: '8px', 
+                  border: '1px solid var(--border)',
+                  whiteSpace: 'pre-wrap',
+                  minHeight: '50px',
+                  color: activeStudent.notes ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontStyle: activeStudent.notes ? 'normal' : 'italic',
+                  lineHeight: '1.5'
+                }}>
+                  {activeStudent.notes || 'No notes added for this student.'}
                 </div>
-              ) : (
-                <div 
-                  style={{
-                    height: '160px',
-                    border: '2px dashed var(--border)',
-                    borderRadius: 'var(--radius-sm)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--text-muted)',
-                    fontSize: '0.85rem'
-                  }}
-                >
-                  <span>No licence photo uploaded.</span>
-                </div>
-              )}
+              </div>
             </div>
-          </div>
 
           {/* Balance Cards */}
           <div className="kpi-grid" style={{ marginBottom: '1.5rem' }}>
@@ -1855,14 +1742,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
             )}
           </div>
 
-          {/* Modal zooms image */}
-          {isZoomOpen && (
-            <Modal isOpen={isZoomOpen} onClose={() => setIsZoomOpen(false)} title="Learner's Licence Photo">
-              <div className="licence-zoom-container">
-                <img src={activeStudent.licencePhoto} alt="Licence Full View" />
-              </div>
-            </Modal>
-          )}
+
 
           {/* Quick Add Booking modal */}
           {isQuickBookingOpen && (
@@ -2181,42 +2061,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Learner's Licence Photo</label>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    style={{ display: 'none' }} 
-                    ref={editFileInputRef} 
-                    onChange={handleEditPhotoUpload}
-                  />
-                  <div 
-                    className="licence-preview-container"
-                    onClick={() => editFileInputRef.current?.click()}
-                  >
-                    {compressing ? (
-                      <span style={{ fontSize: '0.85rem' }}>Compressing image...</span>
-                    ) : editLicencePhoto ? (
-                      <img src={editLicencePhoto} alt="Licence Preview" />
-                    ) : (
-                      <div className="upload-placeholder">
-                        <ImageIcon size={28} />
-                        <span>Upload photo (JPEG/PNG)</span>
-                      </div>
-                    )}
-                  </div>
-                  {editLicencePhoto && (
-                    <button 
-                      type="button" 
-                      className="btn btn-secondary btn-sm" 
-                      style={{ marginTop: '0.5rem', alignSelf: 'flex-start' }}
-                      onClick={() => setEditLicencePhoto('')}
-                    >
-                      Clear Image
-                    </button>
-                  )}
-                </div>
-
                 <div className="dialog-footer">
                   <button type="button" className="btn btn-secondary" onClick={() => setIsEditStudentOpen(false)}>Cancel</button>
                   <button type="submit" className="btn btn-primary" disabled={isEditPhoneInvalid}>Save Changes</button>
@@ -2399,7 +2243,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
           <div className="header-row">
             <div>
               <h1 style={{ fontSize: '2rem', margin: 0 }}>Student Records</h1>
-              <p style={{ color: 'var(--text-muted)' }}>Manage student information, ledger status, and licence files</p>
+              <p style={{ color: 'var(--text-muted)' }}>Manage student information, ledger status, and profiles</p>
             </div>
             <button className="btn btn-primary" onClick={() => setIsAddStudentOpen(true)}>
               <Plus size={16} /> Add New Student
@@ -2536,13 +2380,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                   </thead>
                   <tbody>
                     {sortedStudents.map((student) => {
-                      // Calc balance for this student in the loop
-                      const studBookings = bookings.filter(b => b.studentId === student.id);
-                      const studPayments = payments.filter(p => p.studentId === student.id);
-                      const bill = studBookings.reduce((sum, b) => sum + b.totalPrice, 0);
-                      const pay = studPayments.reduce((sum, p) => sum + p.amount, 0);
-                      const bal = bill - pay;
-
                       return (
                         <tr key={student.id}>
                           <td style={{ fontWeight: 600 }}>
@@ -2818,42 +2655,6 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                     onChange={(e) => setNewNotes(e.target.value)}
                     style={{ resize: 'vertical' }}
                   />
-                </div>
-
-                <div className="form-group">
-                  <label>Learner's Licence Photo</label>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    style={{ display: 'none' }} 
-                    ref={fileInputRef} 
-                    onChange={handlePhotoUpload}
-                  />
-                  <div 
-                    className="licence-preview-container"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {compressing ? (
-                      <span style={{ fontSize: '0.85rem' }}>Compressing image...</span>
-                    ) : newLicencePhoto ? (
-                      <img src={newLicencePhoto} alt="Licence Preview" />
-                    ) : (
-                      <div className="upload-placeholder">
-                        <ImageIcon size={28} />
-                        <span>Upload photo (JPEG/PNG)</span>
-                      </div>
-                    )}
-                  </div>
-                  {newLicencePhoto && (
-                    <button 
-                      type="button" 
-                      className="btn btn-secondary btn-sm" 
-                      style={{ marginTop: '0.5rem', alignSelf: 'flex-start' }}
-                      onClick={() => setNewLicencePhoto('')}
-                    >
-                      Clear Image
-                    </button>
-                  )}
                 </div>
 
                 <div className="dialog-footer">
