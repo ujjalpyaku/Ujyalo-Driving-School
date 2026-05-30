@@ -41,25 +41,25 @@ export default function Payments() {
     }
   }, [isEditPaymentOpen]);
 
-  // Filter students lists
-  const filteredStudentsForSelect = students.filter(s => {
-    if (s.id === selectedStudentId) return true;
-    return s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-           s.phone.includes(studentSearchTerm);
-  });
-
-  const filteredStudentsForEditSelect = students.filter(s => {
-    if (s.id === epStudentId) return true;
-    return s.name.toLowerCase().includes(editStudentSearchTerm.toLowerCase()) ||
-           s.phone.includes(editStudentSearchTerm);
-  });
-
   // Sorting state
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'descending' });
 
   // Fetch db items
   const students = useLiveQuery(() => db.students.toArray()) || [];
   const payments = useLiveQuery(() => db.payments.toArray()) || [];
+
+  // Filter students lists
+  const filteredStudentsForSelect = students.filter(s => {
+    if (s.id === selectedStudentId) return true;
+    return (s.name || '').toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+           (s.phone || '').includes(studentSearchTerm);
+  });
+
+  const filteredStudentsForEditSelect = students.filter(s => {
+    if (s.id === epStudentId) return true;
+    return (s.name || '').toLowerCase().includes(editStudentSearchTerm.toLowerCase()) ||
+           (s.phone || '').includes(editStudentSearchTerm);
+  });
 
   const requestSort = (key) => {
     let direction = 'ascending';
