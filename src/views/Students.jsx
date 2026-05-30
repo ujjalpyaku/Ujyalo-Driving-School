@@ -211,6 +211,20 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       normalizedPhone = '0' + cleanPhone.slice(2);
     }
 
+    // Check for duplicate phone number
+    const existingStudent = students.find(s => s.phone === normalizedPhone);
+    if (existingStudent) {
+      setConfirmState({
+        show: true,
+        title: 'Duplicate Phone Number',
+        message: `A student named "${existingStudent.name}" is already registered with the phone number ${normalizedPhone}. Please use a unique phone number.`,
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
+      return;
+    }
+
     const studentId = crypto.randomUUID();
     await db.students.add({
       id: studentId,
@@ -712,6 +726,20 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       normalizedPhone = '0' + cleanPhone.slice(3);
     } else if (cleanPhone.startsWith('61')) {
       normalizedPhone = '0' + cleanPhone.slice(2);
+    }
+
+    // Check for duplicate phone number
+    const existingStudent = students.find(s => s.phone === normalizedPhone && s.id !== activeStudent.id);
+    if (existingStudent) {
+      setConfirmState({
+        show: true,
+        title: 'Duplicate Phone Number',
+        message: `Another student named "${existingStudent.name}" is already registered with the phone number ${normalizedPhone}. Please use a unique phone number.`,
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
+      return;
     }
 
     const originalName = activeStudent.name;

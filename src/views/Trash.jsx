@@ -41,6 +41,15 @@ export default function Trash() {
           message: `Are you sure you want to restore the student profile for "${item.data.student.name}" along with all their linked bookings and payments?`,
           onConfirm: async () => {
             try {
+              // Check for duplicate phone number
+              const allStudents = await db.students.toArray();
+              const targetPhone = item.data.student.phone;
+              const duplicate = allStudents.find(s => s.phone === targetPhone);
+              if (duplicate) {
+                showAlert("Duplicate Phone Number", `Cannot restore "${item.data.student.name}". A student named "${duplicate.name}" is already registered with the phone number ${targetPhone}. Please delete or edit the active student first.`, true);
+                return;
+              }
+
               // Restore student
               await db.students.put(item.data.student);
               // Restore bookings
