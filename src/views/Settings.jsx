@@ -183,7 +183,7 @@ export default function Settings() {
       const studentsData = await db.students.toArray();
       const bookingsData = await db.bookings.toArray();
       const paymentsData = await db.payments.toArray();
-      const settingsData = await db.settings.toArray();
+      const settingsData = (await db.settings.toArray()).filter(s => s.id !== 'security');
 
       const backup = {
         version: 1,
@@ -246,7 +246,10 @@ export default function Settings() {
             if (backup.payments.length > 0) await db.payments.bulkAdd(backup.payments);
             
             if (backup.settings.length > 0) {
-              await Promise.all(backup.settings.map(s => db.settings.put(s)));
+              const filteredSettings = backup.settings.filter(s => s.id !== 'security');
+              if (filteredSettings.length > 0) {
+                await Promise.all(filteredSettings.map(s => db.settings.put(s)));
+              }
             } else {
               // re-seed settings if empty
               await db.settings.put({

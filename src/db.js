@@ -46,19 +46,7 @@ const initDefaults = async () => {
   }
 
   const securityRef = doc(firestore, "settings", "security");
-  const securitySnap = await getDoc(securityRef);
-  if (!securitySnap.exists()) {
-    await setDoc(securityRef, {
-      password: 'ujyalo2026',
-      question1: 'In what city or town did your parents meet?',
-      answer1: 'sydney',
-      question2: 'What was the make and model of your first car?',
-      answer2: 'mazda',
-      question3: 'What is your favorite childhood movie?',
-      answer3: 'shrek',
-      updatedAt: new Date().toISOString()
-    });
-  }
+  await deleteDoc(securityRef);
 };
 
 initDefaults().catch(console.error);
