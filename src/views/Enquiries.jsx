@@ -104,6 +104,7 @@ export default function Enquiries() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: '50px' }}>S.N</th>
                   <th style={{ width: '200px' }}>Name & Contact</th>
                   <th style={{ width: '250px' }}>Interested Course</th>
                   <th>Message / Availability</th>
@@ -112,8 +113,9 @@ export default function Enquiries() {
                 </tr>
               </thead>
               <tbody>
-                {sortedInquiries.map((item) => (
+                {sortedInquiries.map((item, index) => (
                   <tr key={item.id}>
+                    <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{toTitleCase(item.name)}</strong>

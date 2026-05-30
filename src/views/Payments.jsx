@@ -274,6 +274,7 @@ export default function Payments() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: '50px' }}>S.N</th>
                   <th onClick={() => requestSort('studentName')} style={{ cursor: 'pointer', userSelect: 'none' }}>
                     Student Name {getSortIcon('studentName')}
                   </th>
@@ -293,8 +294,9 @@ export default function Payments() {
                 </tr>
               </thead>
               <tbody>
-                {sortedPayments.map((p) => (
+                {sortedPayments.map((p, index) => (
                   <tr key={p.id}>
+                    <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
                     <td style={{ fontWeight: 600 }}>{p.studentName}</td>
                     <td>{p.studentPhone}</td>
                     <td>{p.date}</td>

@@ -875,6 +875,7 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
                 <table style={{ fontSize: '0.85rem' }}>
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}>S.N</th>
                       <th>Name</th>
                       <th>Phone</th>
                       <th>Today</th>
@@ -883,8 +884,9 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {availableStudents.map(student => (
+                    {availableStudents.map((student, index) => (
                       <tr key={student.id}>
+                        <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
                         <td style={{ fontWeight: 600 }}>
                           <a 
                             href="#" 
@@ -945,6 +947,7 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
               <table>
                 <thead>
                   <tr>
+                    <th style={{ width: '40px' }}>S.N</th>
                     <th onClick={() => requestDebtorSort('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>
                       Student Name {getDebtorSortIcon('name')}
                     </th>
@@ -958,8 +961,9 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedDebtors.slice(0, 5).map(student => (
+                  {sortedDebtors.slice(0, 5).map((student, index) => (
                     <tr key={student.id}>
+                      <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
                       <td style={{ fontWeight: 600 }}>{student.name}</td>
                       <td>{student.phone}</td>
                       <td style={{ color: 'var(--danger)', fontWeight: 'bold' }}>${student.balance.toFixed(2)}</td>

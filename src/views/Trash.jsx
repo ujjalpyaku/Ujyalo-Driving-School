@@ -291,6 +291,7 @@ export default function Trash() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: '50px' }}>S.N</th>
                   <th style={{ width: '160px' }}>Record Type</th>
                   <th>Description / Info</th>
                   <th style={{ width: '220px' }}>Deleted On</th>
@@ -298,8 +299,9 @@ export default function Trash() {
                 </tr>
               </thead>
               <tbody>
-                {sortedTrash.map((item) => (
+                {sortedTrash.map((item, index) => (
                   <tr key={item.id}>
+                    <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
                     <td>
                       <span className={`badge badge-${item.type === 'student' ? 'primary' : item.type === 'enquiry' ? 'success' : item.type === 'enrolment' ? 'warning' : 'info'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                         {item.type === 'student' ? <User size={13} /> : item.type === 'enquiry' ? <Mail size={13} /> : item.type === 'enrolment' ? <User size={13} /> : <Calendar size={13} />}

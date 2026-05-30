@@ -633,6 +633,7 @@ export default function Bookings() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: '50px' }}>S.N</th>
                   <th onClick={() => requestSort('studentName')} style={{ cursor: 'pointer', userSelect: 'none' }}>
                     Student Name {getSortIcon('studentName')}
                   </th>
@@ -661,8 +662,9 @@ export default function Bookings() {
                 </tr>
               </thead>
               <tbody>
-                {sortedBookings.map((b) => (
+                {sortedBookings.map((b, index) => (
                   <tr key={b.id} style={b.status === 'cancelled' ? { opacity: 0.6 } : {}}>
+                    <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
                     <td style={{ fontWeight: 600 }}>{b.studentName}</td>
                     <td>{b.date}</td>
                     <td>{formatTime12Hour(b.timeFrom)} – {formatTime12Hour(b.timeTo)}</td>

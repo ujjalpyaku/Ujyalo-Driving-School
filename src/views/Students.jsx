@@ -1145,6 +1145,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
             <table>
                <thead>
                  <tr>
+                   <th class="text-left" style="width: 40px;">S.N</th>
                    <th class="text-left">Date</th>
                    <th class="text-left">Description</th>
                    <th class="text-center">Qty (hrs)</th>
@@ -1154,8 +1155,9 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                  </tr>
                </thead>
                <tbody>
-                 ${bookingsList.map(b => `
+                 ${bookingsList.map((b, idx) => `
                    <tr>
+                     <td style="color: #6b7280;">${idx + 1}</td>
                      <td>${b.date}</td>
                      <td style="text-transform: capitalize;">${b.type} Lesson ${b.type === 'test' ? 'Preparation' : ''}</td>
                      <td class="text-center">${b.type === 'test' ? '—' : b.duration.toFixed(1)}</td>
@@ -1495,6 +1497,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                   <table>
                     <thead>
                       <tr>
+                        <th style={{ width: '40px' }}>S.N</th>
                         <th onClick={() => requestLedgerSort('date')} style={{ cursor: 'pointer', userSelect: 'none' }}>
                           Date {getLedgerSortIcon('date')}
                         </th>
@@ -1516,6 +1519,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                     <tbody>
                       {sortedLedger.map((item, idx) => (
                         <tr key={idx} style={item.raw?.status === 'cancelled' ? { opacity: 0.6 } : {}}>
+                          <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
                           <td>{item.date}</td>
                           <td style={{ fontSize: '0.9rem', textDecoration: item.raw?.status === 'cancelled' ? 'line-through' : 'none' }}>{item.description}</td>
                           <td style={{ textAlign: 'right', color: 'var(--text-main)', fontWeight: item.type === 'charge' ? '600' : 'normal', textDecoration: item.raw?.status === 'cancelled' ? 'line-through' : 'none' }}>
@@ -1710,6 +1714,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                     <table>
                       <thead>
                         <tr>
+                          <th style={{ textAlign: 'left', width: '40px' }}>S.N</th>
                           <th style={{ textAlign: 'left' }}>Date</th>
                           <th style={{ textAlign: 'left' }}>Description</th>
                           <th style={{ textAlign: 'center' }}>Qty (hrs)</th>
@@ -1722,6 +1727,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                         {activeBookings.filter(b => b.status !== 'cancelled').length > 0 ? (
                           activeBookings.filter(b => b.status !== 'cancelled').map((b, idx) => (
                             <tr key={idx}>
+                              <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
                               <td>{b.date}</td>
                               <td style={{ textTransform: 'capitalize' }}>
                                 {b.type} Lesson {b.type === 'test' ? 'Preparation' : ''}
@@ -1742,7 +1748,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem 0', color: 'var(--text-muted)' }}>
+                            <td colSpan="7" style={{ textAlign: 'center', padding: '1.5rem 0', color: 'var(--text-muted)' }}>
                               No billed lessons found for this student.
                             </td>
                           </tr>
@@ -2387,6 +2393,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                 <table>
                   <thead>
                     <tr>
+                      <th style={{ width: '50px' }}>S.N</th>
                       <th onClick={() => requestSort('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>
                         Full Name {getSortIcon('name')}
                       </th>
@@ -2416,9 +2423,10 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedStudents.map((student) => {
+                    {sortedStudents.map((student, index) => {
                       return (
                         <tr key={student.id}>
+                          <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
                           <td style={{ fontWeight: 600 }}>
                             <span 
                               style={{ 

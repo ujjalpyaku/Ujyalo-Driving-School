@@ -284,6 +284,7 @@ export default function Enrolments() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: '50px' }}>S.N</th>
                   <th style={{ width: '220px' }}>Name & Contact</th>
                   <th style={{ width: '120px' }}>Gender</th>
                   <th>Availability</th>
@@ -293,8 +294,9 @@ export default function Enrolments() {
                 </tr>
               </thead>
               <tbody>
-                {sortedEnrolments.map((item) => (
+                {sortedEnrolments.map((item, index) => (
                   <tr key={item.id}>
+                    <td style={{ color: 'var(--text-muted)' }}>{index + 1}</td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{toTitleCase(item.name)}</strong>
