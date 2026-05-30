@@ -3,31 +3,11 @@ import { useLiveQuery } from '../db';
 import { db } from '../db';
 
 export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme, onLogout }) {
-  const newEnquiriesCount = useLiveQuery(
-    async () => {
-      try {
-        const list = await db.inquiries.toArray();
-        return list.filter(item => item.status === 'new').length;
-      } catch {
-        return 0;
-      }
-    },
-    [],
-    0
-  );
+  const inquiries = useLiveQuery(() => db.inquiries.toArray()) || [];
+  const enrolments = useLiveQuery(() => db.enrolments.toArray()) || [];
 
-  const newEnrolmentsCount = useLiveQuery(
-    async () => {
-      try {
-        const list = await db.enrolments.toArray();
-        return list.filter(item => item.status === 'new').length;
-      } catch {
-        return 0;
-      }
-    },
-    [],
-    0
-  );
+  const newEnquiriesCount = inquiries.filter(item => item.status === 'new').length;
+  const newEnrolmentsCount = enrolments.filter(item => item.status === 'new').length;
 
   const links = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
