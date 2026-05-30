@@ -85,10 +85,24 @@ export default function Settings() {
       return;
     }
 
+    const cleanPhone = schoolPhone.replace(/[\s\-\(\)]/g, '');
+    const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      alert('Please enter a valid Australian mobile number for the school contact (e.g. 0412 345 678 or +61 412 345 678).');
+      return;
+    }
+
+    let normalizedPhone = cleanPhone;
+    if (cleanPhone.startsWith('+61')) {
+      normalizedPhone = '0' + cleanPhone.slice(3);
+    } else if (cleanPhone.startsWith('61')) {
+      normalizedPhone = '0' + cleanPhone.slice(2);
+    }
+
     try {
       await db.settings.put({
         id: 'schoolDetails',
-        phone: schoolPhone.trim(),
+        phone: normalizedPhone,
         email: schoolEmail.trim(),
         serviceLocations: serviceLocations.trim(),
         pickupLocations: pickupLocations.trim(),

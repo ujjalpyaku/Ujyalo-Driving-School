@@ -225,17 +225,25 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       return;
     }
 
-    const cleanedPhone = newPhone.replace(/\D/g, '');
-    if (cleanedPhone.length !== 10) {
-      alert('Please enter a valid 10-digit phone number.');
+    const cleanPhone = newPhone.replace(/[\s\-\(\)]/g, '');
+    const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      alert('Please enter a valid Australian mobile number (e.g. 0412 345 678 or +61 412 345 678).');
       return;
+    }
+
+    let normalizedPhone = cleanPhone;
+    if (cleanPhone.startsWith('+61')) {
+      normalizedPhone = '0' + cleanPhone.slice(3);
+    } else if (cleanPhone.startsWith('61')) {
+      normalizedPhone = '0' + cleanPhone.slice(2);
     }
 
     const studentId = crypto.randomUUID();
     await db.students.add({
       id: studentId,
       name: newName.trim(),
-      phone: cleanedPhone,
+      phone: normalizedPhone,
       gender: newGender,
       availability: buildAvailString(newAvail),
       classRateDiscount: Number(newClassDiscount) || 0,
@@ -727,19 +735,27 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       return;
     }
 
-    const cleanedPhone = editPhone.replace(/\D/g, '');
-    if (cleanedPhone.length !== 10) {
-      alert('Please enter a valid 10-digit phone number.');
+    const cleanPhone = editPhone.replace(/[\s\-\(\)]/g, '');
+    const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      alert('Please enter a valid Australian mobile number (e.g. 0412 345 678 or +61 412 345 678).');
       return;
+    }
+
+    let normalizedPhone = cleanPhone;
+    if (cleanPhone.startsWith('+61')) {
+      normalizedPhone = '0' + cleanPhone.slice(3);
+    } else if (cleanPhone.startsWith('61')) {
+      normalizedPhone = '0' + cleanPhone.slice(2);
     }
 
     const originalName = activeStudent.name;
     const originalPhone = activeStudent.phone;
-    const hasNameOrPhoneChanged = originalName !== editName.trim() || originalPhone !== cleanedPhone;
+    const hasNameOrPhoneChanged = originalName !== editName.trim() || originalPhone !== normalizedPhone;
 
     await db.students.update(activeStudent.id, {
       name: editName.trim(),
-      phone: cleanedPhone,
+      phone: normalizedPhone,
       gender: editGender,
       availability: buildAvailString(editAvail),
       classRateDiscount: Number(editClassDiscount) || 0,
@@ -755,12 +771,12 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       // Cascade to bookings
       await db.bookings.where('studentId').equals(activeStudent.id).modify({
         studentName: editName.trim(),
-        studentPhone: cleanedPhone
+        studentPhone: normalizedPhone
       });
       // Cascade to payments
       await db.payments.where('studentId').equals(activeStudent.id).modify({
         studentName: editName.trim(),
-        studentPhone: cleanedPhone
+        studentPhone: normalizedPhone
       });
     }
 
