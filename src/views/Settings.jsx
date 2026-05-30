@@ -28,6 +28,18 @@ export default function Settings() {
   const [changingPassword, setChangingPassword] = useState(false);
 
   const importFileRef = useRef(null);
+  const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null });
+
+  const showAlert = (title, message, isDanger = false) => {
+    setConfirmState({
+      show: true,
+      title,
+      message,
+      showCancel: false,
+      confirmText: 'OK',
+      isDanger
+    });
+  };
 
   // Fetch settings
   const pricingSettings = useLiveQuery(() => db.settings.get('pricing'));
@@ -57,7 +69,7 @@ export default function Settings() {
   const handleSavePricing = async (e) => {
     e.preventDefault();
     if (!normalRate || !packageRate || !testRate || normalRate <= 0 || packageRate <= 0 || testRate <= 0) {
-      alert('Please enter valid, positive numbers for all lesson rates.');
+      showAlert('Invalid Lesson Rates', 'Please enter valid, positive numbers for all lesson rates.');
       return;
     }
 
@@ -73,7 +85,7 @@ export default function Settings() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      alert('Failed to save rates: ' + err.message);
+      showAlert('Error Saving Rates', 'Failed to save rates: ' + err.message, true);
     }
   };
 
@@ -81,14 +93,14 @@ export default function Settings() {
   const handleSaveSchoolDetails = async (e) => {
     e.preventDefault();
     if (!schoolPhone.trim() || !schoolEmail.trim() || !serviceLocations.trim() || !pickupLocations.trim()) {
-      alert('Please fill out all school details, service locations, and pickup locations.');
+      showAlert('Missing Information', 'Please fill out all school details, service locations, and pickup locations.');
       return;
     }
 
     const cleanPhone = schoolPhone.replace(/[\s\-\(\)]/g, '');
     const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
     if (!phoneRegex.test(cleanPhone)) {
-      alert('Please enter a valid Australian mobile number for the school contact (e.g. 0412 345 678 or +61 412 345 678).');
+      showAlert('Invalid Phone Number', 'Please enter a valid Australian mobile number for the school contact (e.g. 0412 345 678 or +61 412 345 678).');
       return;
     }
 
@@ -112,7 +124,7 @@ export default function Settings() {
       setSaveSchoolSuccess(true);
       setTimeout(() => setSaveSchoolSuccess(false), 3000);
     } catch (err) {
-      alert('Failed to save school details: ' + err.message);
+      showAlert('Error Saving Details', 'Failed to save school details: ' + err.message, true);
     }
   };
 
@@ -190,67 +202,86 @@ export default function Settings() {
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Failed to export backup data: ' + err.message);
+      showAlert('Export Failed', 'Failed to export backup data: ' + err.message, true);
     }
   };
 
   // Import JSON backup file
-  const handleImportBackup = async (e) => {
+  const handleImportBackup = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const confirmed = window.confirm(
-      'WARNING: Importing this backup file will overwrite all current student details, bookings, payments, and settings in this browser database.\n\nAre you sure you want to proceed?'
-    );
+    const target = e.target;
 
-    if (!confirmed) {
-      e.target.value = '';
-      return;
-    }
+    setConfirmState({
+      show: true,
+      title: 'Import Backup Database',
+      message: 'WARNING: Importing this backup file will overwrite all current student details, bookings, payments, and settings in this browser database.\n\nAre you sure you want to proceed?',
+      showCancel: true,
+      confirmText: 'Import & Overwrite',
+      isDanger: true,
+      onConfirm: () => {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const backup = JSON.parse(event.target.result);
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const backup = JSON.parse(event.target.result);
+            // Simple validation check
+            if (!backup.students || !backup.bookings || !backup.payments || !backup.settings) {
+              throw new Error('Invalid backup file format. Missing core databases.');
+            }
 
-        // Simple validation check
-        if (!backup.students || !backup.bookings || !backup.payments || !backup.settings) {
-          throw new Error('Invalid backup file format. Missing core databases.');
-        }
+            // Wipe existing tables
+            await Promise.all([
+              db.students.clear(),
+              db.bookings.clear(),
+              db.payments.clear(),
+              db.settings.clear()
+            ]);
 
-        // Wipe existing tables
-        await Promise.all([
-          db.students.clear(),
-          db.bookings.clear(),
-          db.payments.clear(),
-          db.settings.clear()
-        ]);
+            // Bulk load tables
+            if (backup.students.length > 0) await db.students.bulkAdd(backup.students);
+            if (backup.bookings.length > 0) await db.bookings.bulkAdd(backup.bookings);
+            if (backup.payments.length > 0) await db.payments.bulkAdd(backup.payments);
+            
+            if (backup.settings.length > 0) {
+              await Promise.all(backup.settings.map(s => db.settings.put(s)));
+            } else {
+              // re-seed settings if empty
+              await db.settings.put({
+                id: 'pricing',
+                normalRate: 63,
+                packageRate: 63,
+                testRate: 210,
+                updatedAt: new Date().toISOString()
+              });
+            }
 
-        // Bulk load tables
-        if (backup.students.length > 0) await db.students.bulkAdd(backup.students);
-        if (backup.bookings.length > 0) await db.bookings.bulkAdd(backup.bookings);
-        if (backup.payments.length > 0) await db.payments.bulkAdd(backup.payments);
-        
-        if (backup.settings.length > 0) {
-          await Promise.all(backup.settings.map(s => db.settings.put(s)));
-        } else {
-          // re-seed settings if empty
-          await db.settings.put({
-            id: 'pricing',
-            normalRate: 63,
-            packageRate: 63,
-            testRate: 210,
-            updatedAt: new Date().toISOString()
-          });
-        }
-
-        alert('Database successfully restored! The application will now reload to display the new data.');
-        window.location.reload();
-      } catch (err) {
-        alert('Failed to restore backup: ' + err.message);
+            setConfirmState({
+              show: true,
+              title: 'Success',
+              message: 'Database successfully restored! The application will now reload to display the new data.',
+              showCancel: false,
+              confirmText: 'OK',
+              onConfirm: () => {
+                window.location.reload();
+              }
+            });
+          } catch (err) {
+            setConfirmState({
+              show: true,
+              title: 'Error Restoring Backup',
+              message: 'Failed to restore backup: ' + err.message,
+              showCancel: false,
+              confirmText: 'OK',
+              isDanger: true
+            });
+          }
+        };
+        reader.readAsText(file);
+        target.value = '';
       }
-    };
-    reader.readAsText(file);
+    });
   };
 
   return (
@@ -607,6 +638,68 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Generic Confirmation Modal */}
+      {confirmState.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1rem'
+        }}>
+          <div className="card" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '1.75rem',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              {confirmState.title}
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
+              {confirmState.message}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              {confirmState.showCancel !== false && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  {confirmState.cancelText || 'Cancel'}
+                </button>
+              )}
+              <button 
+                className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
+                onClick={() => {
+                  if (confirmState.onConfirm) {
+                    confirmState.onConfirm();
+                  }
+                  setConfirmState(prev => ({ ...prev, show: false }));
+                }}
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                {confirmState.confirmText || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

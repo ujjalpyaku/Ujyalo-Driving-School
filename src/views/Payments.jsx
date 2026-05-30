@@ -56,7 +56,14 @@ export default function Payments() {
   const handleEditPaymentSubmit = async (e) => {
     e.preventDefault();
     if (!epStudentId || !epDate || !epAmount || Number(epAmount) <= 0) {
-      alert('Please fill out all fields with valid values.');
+      setConfirmState({
+        show: true,
+        title: 'Invalid Input',
+        message: 'Please fill out all fields with valid values.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
@@ -80,7 +87,14 @@ export default function Payments() {
   const handleAddPaymentSubmit = async (e) => {
     e.preventDefault();
     if (!selectedStudentId || !paymentDate || !paymentAmount || Number(paymentAmount) <= 0) {
-      alert('Please fill out all fields with valid values.');
+      setConfirmState({
+        show: true,
+        title: 'Invalid Input',
+        message: 'Please fill out all fields with valid values.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
@@ -117,7 +131,14 @@ export default function Payments() {
           await db.payments.delete(paymentId);
         } catch (err) {
           console.error("Failed to delete payment:", err);
-          alert("Error deleting payment: " + err.message);
+          setConfirmState({
+            show: true,
+            title: 'Error Deleting Payment',
+            message: err.message,
+            showCancel: false,
+            confirmText: 'OK',
+            isDanger: true
+          });
         }
       },
       confirmText: 'Delete',
@@ -453,17 +474,21 @@ export default function Payments() {
               {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                {confirmState.cancelText || 'Cancel'}
-              </button>
+              {confirmState.showCancel !== false && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  {confirmState.cancelText || 'Cancel'}
+                </button>
+              )}
               <button 
                 className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
                 onClick={() => {
-                  confirmState.onConfirm();
+                  if (confirmState.onConfirm) {
+                    confirmState.onConfirm();
+                  }
                   setConfirmState(prev => ({ ...prev, show: false }));
                 }}
                 style={{ padding: '0.5rem 1rem' }}

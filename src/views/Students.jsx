@@ -23,6 +23,17 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
   
+  const showAlert = (title, message, isDanger = false) => {
+    setConfirmState({
+      show: true,
+      title,
+      message,
+      showCancel: false,
+      confirmText: 'OK',
+      isDanger
+    });
+  };
+  
   // Quick Action Sub-Modals
   const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
   const [isQuickPaymentOpen, setIsQuickPaymentOpen] = useState(false);
@@ -173,7 +184,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       const compressedBase64 = await compressImage(file);
       setNewLicencePhoto(compressedBase64);
     } catch (err) {
-      alert('Error reading/compressing photo: ' + err.message);
+      showAlert('Compression Error', 'Error reading/compressing photo: ' + err.message, true);
     } finally {
       setCompressing(false);
     }
@@ -543,7 +554,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const handleQuickBookingSubmit = async (e) => {
     e.preventDefault();
     if (!bDate || !bTimeFrom || !bTimeTo) {
-      alert('Please fill out date and times.');
+      showAlert('Missing Information', 'Please fill out date and times.');
       return;
     }
 
@@ -552,7 +563,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     const [hEnd, mEnd] = bTimeTo.split(':').map(Number);
     const durationMin = (hEnd * 60 + mEnd) - (hStart * 60 + mStart);
     if (durationMin <= 0) {
-      alert('End time must be after start time.');
+      showAlert('Invalid Times', 'End time must be after start time.', true);
       return;
     }
     const duration = parseFloat((durationMin / 60).toFixed(2));
@@ -564,7 +575,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       ((bTimeFrom < b.timeTo && b.timeFrom < bTimeTo))
     );
     if (conflictingBooking) {
-      alert(`Booking Conflict!\nThere is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`);
+      showAlert('Booking Conflict', `There is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`, true);
       return;
     }
 
@@ -622,7 +633,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const handleQuickPaymentSubmit = async (e) => {
     e.preventDefault();
     if (!pAmount || Number(pAmount) <= 0) {
-      alert('Please enter a valid payment amount.');
+      showAlert('Invalid Payment', 'Please enter a valid payment amount.');
       return;
     }
 
@@ -673,7 +684,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
           }
         } catch (err) {
           console.error("Failed to delete student:", err);
-          alert("Error deleting student: " + err.message);
+          showAlert('Error', 'Error deleting student: ' + err.message, true);
         }
       },
       confirmText: 'Delete',
@@ -690,7 +701,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       const compressedBase64 = await compressImage(file);
       setEditLicencePhoto(compressedBase64);
     } catch (err) {
-      alert('Error reading/compressing photo: ' + err.message);
+      showAlert('Compression Error', 'Error reading/compressing photo: ' + err.message, true);
     } finally {
       setCompressing(false);
     }
@@ -714,7 +725,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
 
   const handleQuickBookingFromTable = (student) => {
     if (student.status === 'terminated') {
-      alert('Cannot book lessons for a terminated student.');
+      showAlert('Action Not Allowed', 'Cannot book lessons for a terminated student.', true);
       return;
     }
     setSelectedStudentId(student.id);
@@ -879,12 +890,12 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const handleEditBookingSubmit = async (e) => {
     e.preventDefault();
     if (!ebDate || !ebTimeFrom || !ebTimeTo) {
-      alert('Please fill out date and times.');
+      showAlert('Missing Information', 'Please fill out date and times.');
       return;
     }
 
     if (ebDuration <= 0) {
-      alert('End time must be after start time.');
+      showAlert('Invalid Times', 'End time must be after start time.', true);
       return;
     }
 
@@ -896,7 +907,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       ((ebTimeFrom < b.timeTo && b.timeFrom < ebTimeTo))
     );
     if (conflictingBooking) {
-      alert(`Booking Conflict!\nThere is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`);
+      showAlert('Booking Conflict', `There is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`, true);
       return;
     }
 
@@ -926,7 +937,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
           await db.bookings.update(bookingId, { status: 'cancelled' });
         } catch (err) {
           console.error("Failed to cancel booking:", err);
-          alert("Error cancelling booking: " + err.message);
+          showAlert('Error', 'Error cancelling booking: ' + err.message, true);
         }
       },
       confirmText: 'Cancel Booking',
@@ -944,7 +955,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
       ((timeFrom < b.timeTo && b.timeFrom < timeTo))
     );
     if (conflictingBooking) {
-      alert(`Cannot Reinstate Booking Conflict!\nThere is already an active booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease reschedule or cancel the conflict first.`);
+      showAlert('Reinstate Conflict', `Cannot Reinstate Booking Conflict!\nThere is already an active booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease reschedule or cancel the conflict first.`, true);
       return;
     }
 
@@ -957,7 +968,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
           await db.bookings.update(bookingId, { status: 'scheduled' });
         } catch (err) {
           console.error("Failed to reinstate booking:", err);
-          alert("Error reinstating booking: " + err.message);
+          showAlert('Error', 'Error reinstating booking: ' + err.message, true);
         }
       },
       confirmText: 'Reinstate',
@@ -977,7 +988,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const handleEditPaymentSubmit = async (e) => {
     e.preventDefault();
     if (!epAmount || Number(epAmount) <= 0) {
-      alert('Please enter a valid payment amount.');
+      showAlert('Invalid Payment', 'Please enter a valid payment amount.');
       return;
     }
 
@@ -1226,7 +1237,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const handlePrintInvoice = () => {
     const printWindow = window.open('', '_blank', 'width=900,height=800');
     if (!printWindow) {
-      alert('Pop-up blocker is active. Please enable pop-ups to print invoices.');
+      showAlert('Pop-up Blocker Active', 'Pop-up blocker is active. Please enable pop-ups to print invoices.', true);
       return;
     }
     const nonCancelledBookings = activeBookings.filter(b => b.status !== 'cancelled');
@@ -1646,7 +1657,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                                           await db.bookings.delete(item.id);
                                         } catch (err) {
                                           console.error("Failed to delete booking from ledger:", err);
-                                          alert("Error deleting booking: " + err.message);
+                                          showAlert('Error', 'Error deleting booking: ' + err.message, true);
                                         }
                                       },
                                       confirmText: 'Delete',
@@ -1656,13 +1667,13 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                                     setConfirmState({
                                       show: true,
                                       title: 'Delete Payment',
-                                      message: `Are you sure you want to delete this payment of $${item.amount.toFixed(2)}?`,
+                                      message: <div style={{ whiteSpace: 'pre-line' }}>{`Are you sure you want to delete this payment of $${item.amount.toFixed(2)}?`}</div>,
                                       onConfirm: async () => {
                                         try {
                                           await db.payments.delete(item.id);
                                         } catch (err) {
                                           console.error("Failed to delete payment from ledger:", err);
-                                          alert("Error deleting payment: " + err.message);
+                                          showAlert('Error', 'Error deleting payment: ' + err.message, true);
                                         }
                                       },
                                       confirmText: 'Delete',
@@ -2870,7 +2881,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
             <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
               {confirmState.title}
             </h3>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
               {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>

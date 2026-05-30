@@ -5,7 +5,7 @@ import { Trash2, Search, Phone, CheckCircle2 } from 'lucide-react';
 
 export default function Enquiries() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '' });
+  const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
 
   const inquiries = useLiveQuery(() => db.inquiries.toArray()) || [];
 
@@ -22,27 +22,37 @@ export default function Enquiries() {
   }, []);
 
   const handleDeleteClick = (id, name) => {
-    setDeleteConfirm({ show: true, id, name });
-  };
-
-  const handleConfirmDelete = async () => {
-    const { id } = deleteConfirm;
-    setDeleteConfirm({ show: false, id: null, name: '' });
-    try {
-      const item = await db.inquiries.get(id);
-      if (item) {
-        await db.trash.add({
-          id: 'enquiry-' + id,
-          type: 'enquiry',
-          deletedAt: new Date().toISOString(),
-          data: item
-        });
-        await db.inquiries.delete(id);
-      }
-    } catch (err) {
-      console.error("Failed to delete inquiry:", err);
-      alert("Error deleting inquiry: " + err.message);
-    }
+    setConfirmState({
+      show: true,
+      title: 'Confirm Deletion',
+      message: `Are you sure you want to delete the booking inquiry from ${name}? It will be moved to the Recycle Bin.`,
+      onConfirm: async () => {
+        try {
+          const item = await db.inquiries.get(id);
+          if (item) {
+            await db.trash.add({
+              id: 'enquiry-' + id,
+              type: 'enquiry',
+              deletedAt: new Date().toISOString(),
+              data: item
+            });
+            await db.inquiries.delete(id);
+          }
+        } catch (err) {
+          console.error("Failed to delete inquiry:", err);
+          setConfirmState({
+            show: true,
+            title: 'Error Deleting Inquiry',
+            message: err.message,
+            showCancel: false,
+            confirmText: 'OK',
+            isDanger: true
+          });
+        }
+      },
+      confirmText: 'Delete',
+      isDanger: true
+    });
   };
 
   const filteredInquiries = inquiries.filter(item => {
@@ -150,8 +160,8 @@ export default function Enquiries() {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirm.show && (
+      {/* Generic Confirmation Modal */}
+      {confirmState.show && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -164,7 +174,7 @@ export default function Enquiries() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 10000,
           padding: '1rem'
         }}>
           <div className="card" style={{
@@ -179,24 +189,33 @@ export default function Enquiries() {
             flexDirection: 'column',
             gap: '1.25rem'
           }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Confirm Deletion</h3>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              {confirmState.title}
+            </h3>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-              Are you sure you want to delete the booking inquiry from <strong>{deleteConfirm.name}</strong>? It will be moved to the Recycle Bin.
+              {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              {confirmState.showCancel !== false && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  {confirmState.cancelText || 'Cancel'}
+                </button>
+              )}
               <button 
-                className="btn btn-secondary" 
-                onClick={() => setDeleteConfirm({ show: false, id: null, name: '' })}
+                className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
+                onClick={() => {
+                  if (confirmState.onConfirm) {
+                    confirmState.onConfirm();
+                  }
+                  setConfirmState(prev => ({ ...prev, show: false }));
+                }}
                 style={{ padding: '0.5rem 1rem' }}
               >
-                Cancel
-              </button>
-              <button 
-                className="btn btn-danger" 
-                onClick={handleConfirmDelete}
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                Delete
+                {confirmState.confirmText || 'Confirm'}
               </button>
             </div>
           </div>

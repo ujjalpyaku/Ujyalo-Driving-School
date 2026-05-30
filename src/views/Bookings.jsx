@@ -149,12 +149,26 @@ export default function Bookings() {
   const handleEditBookingSubmit = async (e) => {
     e.preventDefault();
     if (!ebStudentId || !ebDate || !ebTimeFrom || !ebTimeTo) {
-      alert('Please fill out all booking fields.');
+      setConfirmState({
+        show: true,
+        title: 'Missing Fields',
+        message: 'Please fill out all booking fields.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
     if (ebDuration <= 0) {
-      alert('End time must be after start time.');
+      setConfirmState({
+        show: true,
+        title: 'Invalid Time Range',
+        message: 'End time must be after start time.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
@@ -169,7 +183,14 @@ export default function Bookings() {
       ((ebTimeFrom < b.timeTo && b.timeFrom < ebTimeTo))
     );
     if (conflictingBooking) {
-      alert(`Booking Conflict!\nThere is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`);
+      setConfirmState({
+        show: true,
+        title: 'Booking Conflict',
+        message: `There is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`,
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
       return;
     }
 
@@ -272,12 +293,26 @@ export default function Bookings() {
   const handleAddBookingSubmit = async (e) => {
     e.preventDefault();
     if (!selectedStudentId || !date || !timeFrom || !timeTo) {
-      alert('Please fill out all booking fields.');
+      setConfirmState({
+        show: true,
+        title: 'Missing Fields',
+        message: 'Please fill out all booking fields.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
     if (calculatedDuration <= 0) {
-      alert('End time must be after start time.');
+      setConfirmState({
+        show: true,
+        title: 'Invalid Time Range',
+        message: 'End time must be after start time.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
@@ -291,7 +326,14 @@ export default function Bookings() {
       ((timeFrom < b.timeTo && b.timeFrom < timeTo))
     );
     if (conflictingBooking) {
-      alert(`Booking Conflict!\nThere is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`);
+      setConfirmState({
+        show: true,
+        title: 'Booking Conflict',
+        message: `There is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`,
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
       return;
     }
 
@@ -366,7 +408,14 @@ export default function Bookings() {
           await db.bookings.delete(bookingId);
         } catch (err) {
           console.error("Failed to delete booking:", err);
-          alert("Error deleting booking: " + err.message);
+          setConfirmState({
+            show: true,
+            title: 'Error Deleting Booking',
+            message: err.message,
+            showCancel: false,
+            confirmText: 'OK',
+            isDanger: true
+          });
         }
       },
       confirmText: 'Delete',
@@ -385,7 +434,14 @@ export default function Bookings() {
           await db.bookings.update(bookingId, { status: 'cancelled' });
         } catch (err) {
           console.error("Failed to cancel booking:", err);
-          alert("Error cancelling booking: " + err.message);
+          setConfirmState({
+            show: true,
+            title: 'Error Cancelling Booking',
+            message: err.message,
+            showCancel: false,
+            confirmText: 'OK',
+            isDanger: true
+          });
         }
       },
       confirmText: 'Cancel Booking',
@@ -403,7 +459,14 @@ export default function Bookings() {
       ((timeFrom < b.timeTo && b.timeFrom < timeTo))
     );
     if (conflictingBooking) {
-      alert(`Cannot Reinstate Booking Conflict!\nThere is already an active booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease reschedule or cancel the conflict first.`);
+      setConfirmState({
+        show: true,
+        title: 'Reinstate Booking Conflict',
+        message: `There is already an active booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease reschedule or cancel the conflict first.`,
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
       return;
     }
 
@@ -416,7 +479,14 @@ export default function Bookings() {
           await db.bookings.update(bookingId, { status: 'scheduled' });
         } catch (err) {
           console.error("Failed to reinstate booking:", err);
-          alert("Error reinstating booking: " + err.message);
+          setConfirmState({
+            show: true,
+            title: 'Error Reinstating Booking',
+            message: err.message,
+            showCancel: false,
+            confirmText: 'OK',
+            isDanger: true
+          });
         }
       },
       confirmText: 'Reinstate',
@@ -447,9 +517,12 @@ export default function Bookings() {
       if (sortConfig.key === 'studentName') {
         aVal = a.studentName;
         bVal = b.studentName;
+      } else if (sortConfig.key === 'studentPhone') {
+        aVal = a.studentPhone;
+        bVal = b.studentPhone;
       } else if (sortConfig.key === 'date') {
-        aVal = `${a.date}T${a.timeFrom || '00:00'}`;
-        bVal = `${b.date}T${b.timeFrom || '00:00'}`;
+        aVal = `${a.date}T${a.createdAt || '00:00:00'}`;
+        bVal = `${b.date}T${b.createdAt || '00:00:00'}`;
       } else if (sortConfig.key === 'timeSlot') {
         aVal = a.timeFrom || '';
         bVal = b.timeFrom || '';
@@ -1000,17 +1073,21 @@ export default function Bookings() {
               {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                {confirmState.cancelText || 'Cancel'}
-              </button>
+              {confirmState.showCancel !== false && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  {confirmState.cancelText || 'Cancel'}
+                </button>
+              )}
               <button 
                 className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
                 onClick={() => {
-                  confirmState.onConfirm();
+                  if (confirmState.onConfirm) {
+                    confirmState.onConfirm();
+                  }
                   setConfirmState(prev => ({ ...prev, show: false }));
                 }}
                 style={{ padding: '0.5rem 1rem' }}

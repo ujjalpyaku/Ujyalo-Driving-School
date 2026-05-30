@@ -123,7 +123,14 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
           setSelectedBooking(null);
         } catch (err) {
           console.error("Failed to cancel booking:", err);
-          alert("Error cancelling booking: " + err.message);
+          setConfirmState({
+            show: true,
+            title: 'Error Cancelling Booking',
+            message: err.message,
+            showCancel: false,
+            confirmText: 'OK',
+            isDanger: true
+          });
         }
       },
       confirmText: 'Cancel Booking',
@@ -140,7 +147,14 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
       ((timeFrom < b.timeTo && b.timeFrom < timeTo))
     );
     if (conflictingBooking) {
-      alert(`Cannot Reinstate Booking Conflict!\nThere is already an active booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease reschedule or cancel the conflict first.`);
+      setConfirmState({
+        show: true,
+        title: 'Reinstate Booking Conflict',
+        message: `There is already an active booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease reschedule or cancel the conflict first.`,
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
       return;
     }
 
@@ -154,7 +168,14 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
           setSelectedBooking(null);
         } catch (err) {
           console.error("Failed to reinstate booking:", err);
-          alert("Error reinstating booking: " + err.message);
+          setConfirmState({
+            show: true,
+            title: 'Error Reinstating Booking',
+            message: err.message,
+            showCancel: false,
+            confirmText: 'OK',
+            isDanger: true
+          });
         }
       },
       confirmText: 'Reinstate',
@@ -227,12 +248,26 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
   const handleAddBookingSubmit = async (e) => {
     e.preventDefault();
     if (!selectedStudentIdState || !date || !timeFrom || !timeTo) {
-      alert('Please fill out all booking fields.');
+      setConfirmState({
+        show: true,
+        title: 'Missing Information',
+        message: 'Please fill out all booking fields.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
     if (calculatedDuration <= 0) {
-      alert('End time must be after start time.');
+      setConfirmState({
+        show: true,
+        title: 'Invalid Time Range',
+        message: 'End time must be after start time.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
@@ -246,7 +281,14 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
       ((timeFrom < b.timeTo && b.timeFrom < timeTo))
     );
     if (conflictingBooking) {
-      alert(`Booking Conflict!\nThere is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`);
+      setConfirmState({
+        show: true,
+        title: 'Booking Conflict',
+        message: `There is already a booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease choose a different time slot.`,
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
       return;
     }
 
@@ -1224,17 +1266,21 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
               {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                {confirmState.cancelText || 'Cancel'}
-              </button>
+              {confirmState.showCancel !== false && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  {confirmState.cancelText || 'Cancel'}
+                </button>
+              )}
               <button 
                 className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
                 onClick={() => {
-                  confirmState.onConfirm();
+                  if (confirmState.onConfirm) {
+                    confirmState.onConfirm();
+                  }
                   setConfirmState(prev => ({ ...prev, show: false }));
                 }}
                 style={{ padding: '0.5rem 1rem' }}

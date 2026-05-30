@@ -18,6 +18,17 @@ export default function Trash() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
 
+  const showAlert = (title, message, isDanger = false) => {
+    setConfirmState({
+      show: true,
+      title,
+      message,
+      showCancel: false,
+      confirmText: 'OK',
+      isDanger
+    });
+  };
+
   const trashItems = useLiveQuery(() => db.trash.toArray()) || [];
 
   const handleRestore = async (item) => {
@@ -43,7 +54,7 @@ export default function Trash() {
               await db.trash.delete(item.id);
             } catch (err) {
               console.error("Failed to restore student profile:", err);
-              alert("Error restoring student: " + err.message);
+              showAlert("Error Restoring Student", err.message, true);
             }
           },
           confirmText: 'Restore',
@@ -55,7 +66,7 @@ export default function Trash() {
         // 1. Validate student profile still exists
         const studentExists = await db.students.get(booking.studentId);
         if (!studentExists) {
-          alert(`Cannot Restore Booking!\nThe associated student profile "${booking.studentName}" has been permanently deleted.\n\nYou must recreate a student profile for them first.`);
+          showAlert("Cannot Restore Booking", `Cannot Restore Booking!\nThe associated student profile "${booking.studentName}" has been permanently deleted.\n\nYou must recreate a student profile for them first.`, true);
           return;
         }
 
@@ -68,7 +79,7 @@ export default function Trash() {
           ((booking.timeFrom < b.timeTo && b.timeFrom < booking.timeTo))
         );
         if (conflictingBooking) {
-          alert(`Cannot Restore Booking Conflict!\nThere is already an active booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease resolve the conflict first.`);
+          showAlert("Cannot Restore Booking Conflict", `Cannot Restore Booking Conflict!\nThere is already an active booking for ${conflictingBooking.studentName} on this day from ${formatTime12Hour(conflictingBooking.timeFrom)} to ${formatTime12Hour(conflictingBooking.timeTo)}.\n\nPlease resolve the conflict first.`, true);
           return;
         }
 
@@ -82,7 +93,7 @@ export default function Trash() {
               await db.trash.delete(item.id);
             } catch (err) {
               console.error("Failed to restore booking:", err);
-              alert("Error restoring booking: " + err.message);
+              showAlert("Error Restoring Booking", err.message, true);
             }
           },
           confirmText: 'Restore',
@@ -99,7 +110,7 @@ export default function Trash() {
               await db.trash.delete(item.id);
             } catch (err) {
               console.error("Failed to restore enquiry:", err);
-              alert("Error restoring enquiry: " + err.message);
+              showAlert("Error Restoring Enquiry", err.message, true);
             }
           },
           confirmText: 'Restore',
@@ -108,7 +119,7 @@ export default function Trash() {
       }
     } catch (err) {
       console.error("Failed to restore item:", err);
-      alert("Error restoring item: " + err.message);
+      showAlert("Error Restoring Item", err.message, true);
     }
   };
 
@@ -128,7 +139,7 @@ export default function Trash() {
           await db.trash.delete(item.id);
         } catch (err) {
           console.error("Failed to purge item:", err);
-          alert("Error purging item: " + err.message);
+          showAlert("Error Purging Item", err.message, true);
         }
       },
       confirmText: 'Delete Permanently',
@@ -146,7 +157,7 @@ export default function Trash() {
           await db.trash.clear();
         } catch (err) {
           console.error("Failed to empty trash:", err);
-          alert("Error emptying trash: " + err.message);
+          showAlert("Error Emptying Trash", err.message, true);
         }
       },
       confirmText: 'Empty Trash',
@@ -349,21 +360,25 @@ export default function Trash() {
             <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
               {confirmState.title}
             </h3>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
               {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                {confirmState.cancelText || 'Cancel'}
-              </button>
+              {confirmState.showCancel !== false && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  {confirmState.cancelText || 'Cancel'}
+                </button>
+              )}
               <button 
                 className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
                 onClick={() => {
-                  confirmState.onConfirm();
+                  if (confirmState.onConfirm) {
+                    confirmState.onConfirm();
+                  }
                   setConfirmState(prev => ({ ...prev, show: false }));
                 }}
                 style={{ padding: '0.5rem 1rem' }}
