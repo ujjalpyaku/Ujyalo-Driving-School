@@ -101,6 +101,12 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     Sunday: { morning: false, afternoon: false }
   });
 
+  const isNewPhoneDirty = newPhone.length > 0;
+  const isNewPhoneInvalid = isNewPhoneDirty && !/^(?:\+?61|0)4\d{8}$/.test(newPhone.replace(/[\s\-\(\)]/g, ''));
+
+  const isEditPhoneDirty = editPhone.length > 0;
+  const isEditPhoneInvalid = isEditPhoneDirty && !/^(?:\+?61|0)4\d{8}$/.test(editPhone.replace(/[\s\-\(\)]/g, ''));
+
   const buildAvailString = (availObj) => {
     const parts = [];
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -2016,6 +2022,11 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                       value={editPhone} 
                       onChange={(e) => setEditPhone(e.target.value)} 
                     />
+                    {isEditPhoneInvalid && (
+                      <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+                        Please enter a valid Australian mobile number (e.g. 0412 345 678).
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label htmlFor="editgender">Gender</label>
@@ -2208,7 +2219,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
 
                 <div className="dialog-footer">
                   <button type="button" className="btn btn-secondary" onClick={() => setIsEditStudentOpen(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">Save Changes</button>
+                  <button type="submit" className="btn btn-primary" disabled={isEditPhoneInvalid}>Save Changes</button>
                 </div>
               </form>
             </Modal>
@@ -2664,6 +2675,11 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
                       value={newPhone} 
                       onChange={(e) => setNewPhone(e.target.value)} 
                     />
+                    {isNewPhoneInvalid && (
+                      <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+                        Please enter a valid Australian mobile number (e.g. 0412 345 678).
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label htmlFor="gender">Gender</label>
@@ -2842,7 +2858,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
 
                 <div className="dialog-footer">
                   <button type="button" className="btn btn-secondary" onClick={() => setIsAddStudentOpen(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">Create Profile</button>
+                  <button type="submit" className="btn btn-primary" disabled={isNewPhoneInvalid}>Create Profile</button>
                 </div>
               </form>
             </Modal>

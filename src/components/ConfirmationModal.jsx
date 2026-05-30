@@ -40,8 +40,6 @@ export default function ConfirmationModal({ confirmState, setConfirmState }) {
     }
   };
 
-  if (!confirmState.show) return null;
-
   return (
     <dialog 
       ref={dialogRef} 
