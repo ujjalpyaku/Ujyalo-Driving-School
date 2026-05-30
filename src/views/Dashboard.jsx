@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from '../db';
 import { db } from '../db';
-import { DollarSign, Clock, Users, Calendar as CalendarIcon, ArrowLeft, ArrowRight, TrendingUp, Plus, Ban, RotateCcw, Trash2 } from 'lucide-react';
+import { DollarSign, Clock, Users, Calendar as CalendarIcon, ArrowLeft, ArrowRight, TrendingUp, Plus } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -35,11 +35,20 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
   const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
   
   // Fetch database entries
-  const students = useLiveQuery(() => db.students.toArray()) || [];
-  const bookings = useLiveQuery(() => db.bookings.toArray()) || [];
-  const payments = useLiveQuery(() => db.payments.toArray()) || [];
+  const rawStudents = useLiveQuery(() => db.students.toArray()) || [];
+  const rawBookings = useLiveQuery(() => db.bookings.toArray()) || [];
+  const rawPayments = useLiveQuery(() => db.payments.toArray()) || [];
   const pricingSettings = useLiveQuery(() => db.settings.get('pricing'));
   const rates = pricingSettings || { normalRate: 63, packageRate: 63, testRate: 210 };
+
+  const toTitleCase = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+  };
+
+  const students = rawStudents.map(s => ({ ...s, name: toTitleCase(s.name) }));
+  const bookings = rawBookings.map(b => ({ ...b, studentName: toTitleCase(b.studentName) }));
+  const payments = rawPayments.map(p => ({ ...p, studentName: toTitleCase(p.studentName) }));
 
   // Helper date calculations
   const getDaysOfWeek = (refDate) => {
@@ -75,16 +84,10 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
 
   const today = new Date();
   const todayStr = formatDateKey(today);
-  const todayDisplayStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  const todayBookings = bookings.filter(b => b.date === todayStr && b.status !== 'cancelled');
-  const sortedTodayBookings = [...todayBookings].sort((a, b) => a.timeFrom.localeCompare(b.timeFrom));
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = formatDateKey(tomorrow);
-  const tomorrowDisplayStr = tomorrow.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  const tomorrowBookings = bookings.filter(b => b.date === tomorrowStr && b.status !== 'cancelled');
-  const sortedTomorrowBookings = [...tomorrowBookings].sort((a, b) => a.timeFrom.localeCompare(b.timeFrom));
 
   const day3 = new Date();
   day3.setDate(today.getDate() + 2);
@@ -110,7 +113,7 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
     setCurrentWeekDate(newDate);
   };
   const goToToday = () => {
-    setCurrentWeekDate(newDate => new Date());
+    setCurrentWeekDate(new Date());
   };
 
   const handleCancelBookingClick = (bookingId, studentName, date) => {
@@ -235,7 +238,7 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
       disc = selectedStudentDiscount.testDisc;
     }
 
-    let finalPrice = 0;
+    let finalPrice;
     if (bookingType === 'test') {
       finalPrice = Math.max(0, rate - disc);
     } else {
@@ -311,7 +314,7 @@ export default function Dashboard({ setActiveTab, setSelectedStudentId }) {
     }
 
     // Recompute total price at submission time using direct values
-    let finalPrice = 0;
+    let finalPrice;
     if (bookingType === 'test') {
       finalPrice = Math.max(0, rateCharged - discountApplied);
     } else {

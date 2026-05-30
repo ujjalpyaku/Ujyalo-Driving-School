@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from '../db';
 import { db } from '../db';
-import { Search, Plus, CreditCard, Calendar, Trash2, DollarSign, Edit2 } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -45,8 +45,16 @@ export default function Payments() {
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'descending' });
 
   // Fetch db items
-  const students = useLiveQuery(() => db.students.toArray()) || [];
-  const payments = useLiveQuery(() => db.payments.toArray()) || [];
+  const rawStudents = useLiveQuery(() => db.students.toArray()) || [];
+  const rawPayments = useLiveQuery(() => db.payments.toArray()) || [];
+
+  const toTitleCase = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+  };
+
+  const students = rawStudents.map(s => ({ ...s, name: toTitleCase(s.name) }));
+  const payments = rawPayments.map(p => ({ ...p, studentName: toTitleCase(p.studentName) }));
 
   // Filter students lists
   const filteredStudentsForSelect = students.filter(s => {

@@ -5,6 +5,11 @@ import { Search, Trash2, User, Phone, Eye, Pencil, ThumbsUp } from 'lucide-react
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
+const toTitleCase = (str) => {
+  if (!str) return '';
+  return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+};
+
 export default function Enrolments() {
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
@@ -99,7 +104,7 @@ export default function Enrolments() {
     setConfirmState({
       show: true,
       title: 'Approve Enrolment Request',
-      message: `Are you sure you want to approve "${request.name}"'s enrolment? This will create an active student profile with their details.`,
+      message: `Are you sure you want to approve "${toTitleCase(request.name)}"'s enrolment? This will create an active student profile with their details.`,
       onConfirm: async () => {
         try {
           // Double check: does a student with this phone number already exist?
@@ -109,7 +114,7 @@ export default function Enrolments() {
             setConfirmState({
               show: true,
               title: 'Duplicate Phone Number',
-              message: `A student named "${duplicate.name}" is already registered with the phone number ${request.phone}. You cannot approve this enrolment request unless you edit or delete the existing student.`,
+              message: `A student named "${toTitleCase(duplicate.name)}" is already registered with the phone number ${request.phone}. You cannot approve this enrolment request unless you edit or delete the existing student.`,
               showCancel: false,
               confirmText: 'OK',
               isDanger: true
@@ -120,7 +125,7 @@ export default function Enrolments() {
           // Create the student profile
           await db.students.add({
             id: request.id,
-            name: request.name,
+            name: toTitleCase(request.name),
             phone: request.phone,
             gender: request.gender,
             availability: request.availability || 'Not specified',
@@ -136,7 +141,7 @@ export default function Enrolments() {
           // Delete enrolment request
           await db.enrolments.delete(request.id);
           
-          showAlert('Enrolment Approved', `"${request.name}" has been successfully added as an active student.`);
+          showAlert('Enrolment Approved', `"${toTitleCase(request.name)}" has been successfully added as an active student.`);
         } catch (err) {
           console.error("Failed to approve enrolment request:", err);
           showAlert("Error", "Failed to approve enrolment request: " + err.message, true);
@@ -151,7 +156,7 @@ export default function Enrolments() {
     setConfirmState({
       show: true,
       title: 'Delete Enrolment Request',
-      message: `Are you sure you want to delete "${request.name}"'s enrolment request? It will be moved to the Recycle Bin.`,
+      message: `Are you sure you want to delete "${toTitleCase(request.name)}"'s enrolment request? It will be moved to the Recycle Bin.`,
       onConfirm: async () => {
         try {
           await db.trash.add({
@@ -173,7 +178,7 @@ export default function Enrolments() {
 
   const openEditModal = (request) => {
     setEditingRequest(request);
-    setEditName(request.name);
+    setEditName(toTitleCase(request.name));
     setEditPhone(request.phone);
     setEditGender(request.gender);
     setEditAvail(parseAvailString(request.availability));
@@ -218,7 +223,7 @@ export default function Enrolments() {
 
     try {
       await db.enrolments.update(editingRequest.id, {
-        name: editName.trim(),
+        name: toTitleCase(editName.trim()),
         phone: normalizedPhone,
         gender: editGender,
         availability: buildAvailString(editAvail),
@@ -292,7 +297,7 @@ export default function Enrolments() {
                   <tr key={item.id}>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{item.name}</strong>
+                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{toTitleCase(item.name)}</strong>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                           <Phone size={13} /> {item.phone}
                         </span>
@@ -394,10 +399,10 @@ export default function Enrolments() {
                 fontWeight: 'bold',
                 fontSize: '1.25rem'
               }}>
-                {selectedRequest.name.charAt(0).toUpperCase()}
+                {toTitleCase(selectedRequest.name).charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{selectedRequest.name}</h3>
+                <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{toTitleCase(selectedRequest.name)}</h3>
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
                   <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>{selectedRequest.gender}</span>
                   <span className="badge badge-warning" style={{ fontSize: '0.75rem' }}>Pending Approval</span>

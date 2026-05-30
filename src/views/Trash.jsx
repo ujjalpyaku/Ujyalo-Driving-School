@@ -30,7 +30,24 @@ export default function Trash() {
     });
   };
 
-  const trashItems = useLiveQuery(() => db.trash.toArray()) || [];
+  const rawTrashItems = useLiveQuery(() => db.trash.toArray()) || [];
+
+  const toTitleCase = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+  };
+
+  const trashItems = rawTrashItems.map(item => {
+    const dataClone = { ...item.data };
+    if (item.type === 'student' && dataClone.student) {
+      dataClone.student = { ...dataClone.student, name: toTitleCase(dataClone.student.name) };
+    } else if ((item.type === 'inquiry' || item.type === 'enrolment') && dataClone.name) {
+      dataClone.name = toTitleCase(dataClone.name);
+    } else if (item.type === 'booking' && dataClone.studentName) {
+      dataClone.studentName = toTitleCase(dataClone.studentName);
+    }
+    return { ...item, data: dataClone };
+  });
 
   const handleRestore = async (item) => {
     try {

@@ -4,6 +4,11 @@ import { db } from '../db';
 import { Trash2, Search, Phone, CheckCircle2 } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 
+const toTitleCase = (str) => {
+  if (!str) return '';
+  return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+};
+
 export default function Enquiries() {
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmState, setConfirmState] = useState({ show: false, title: '', message: '', onConfirm: null, confirmText: '', cancelText: '', isDanger: false });
@@ -26,7 +31,7 @@ export default function Enquiries() {
     setConfirmState({
       show: true,
       title: 'Confirm Deletion',
-      message: `Are you sure you want to delete the booking inquiry from ${name}? It will be moved to the Recycle Bin.`,
+      message: `Are you sure you want to delete the booking inquiry from ${toTitleCase(name)}? It will be moved to the Recycle Bin.`,
       onConfirm: async () => {
         try {
           const item = await db.inquiries.get(id);
@@ -111,7 +116,7 @@ export default function Enquiries() {
                   <tr key={item.id}>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{item.name}</strong>
+                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{toTitleCase(item.name)}</strong>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                           <Phone size={13} /> {item.phone}
                         </span>

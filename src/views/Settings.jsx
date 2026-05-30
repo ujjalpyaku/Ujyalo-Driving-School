@@ -98,7 +98,7 @@ export default function Settings() {
       return;
     }
 
-    const cleanPhone = schoolPhone.replace(/[\s\-\(\)]/g, '');
+    const cleanPhone = schoolPhone.replace(/[\s\-()]/g, '');
     const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
     if (!phoneRegex.test(cleanPhone)) {
       showAlert('Invalid Phone Number', 'Please enter a valid Australian mobile number for the school contact (e.g. 0412 345 678 or +61 412 345 678).');

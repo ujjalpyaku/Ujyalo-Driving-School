@@ -15,6 +15,11 @@ const formatTime12Hour = (timeStr) => {
   return `${displayHour}:${minStr} ${ampm}`;
 };
 
+const toTitleCase = (str) => {
+  if (!str) return '';
+  return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+};
+
 export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
@@ -164,7 +169,11 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const [ledgerSortConfig, setLedgerSortConfig] = useState({ key: 'date', direction: 'ascending' });
 
   // Fetch db items
-  const students = useLiveQuery(() => db.students.toArray()) || [];
+  const rawStudents = useLiveQuery(() => db.students.toArray()) || [];
+  const students = rawStudents.map(s => ({
+    ...s,
+    name: toTitleCase(s.name)
+  }));
   const bookings = useLiveQuery(() => db.bookings.toArray()) || [];
   const payments = useLiveQuery(() => db.payments.toArray()) || [];
   const pricingSettings = useLiveQuery(() => db.settings.get('pricing'));
@@ -228,7 +237,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     const studentId = crypto.randomUUID();
     await db.students.add({
       id: studentId,
-      name: newName.trim(),
+      name: toTitleCase(newName.trim()),
       phone: normalizedPhone,
       gender: newGender,
       availability: buildAvailString(newAvail),
@@ -747,7 +756,7 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     const hasNameOrPhoneChanged = originalName !== editName.trim() || originalPhone !== normalizedPhone;
 
     await db.students.update(activeStudent.id, {
-      name: editName.trim(),
+      name: toTitleCase(editName.trim()),
       phone: normalizedPhone,
       gender: editGender,
       availability: buildAvailString(editAvail),
@@ -762,12 +771,12 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
     if (hasNameOrPhoneChanged) {
       // Cascade to bookings
       await db.bookings.where('studentId').equals(activeStudent.id).modify({
-        studentName: editName.trim(),
+        studentName: toTitleCase(editName.trim()),
         studentPhone: normalizedPhone
       });
       // Cascade to payments
       await db.payments.where('studentId').equals(activeStudent.id).modify({
-        studentName: editName.trim(),
+        studentName: toTitleCase(editName.trim()),
         studentPhone: normalizedPhone
       });
     }

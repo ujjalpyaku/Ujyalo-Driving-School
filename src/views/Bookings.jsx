@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from '../db';
 import { db } from '../db';
-import { Search, Plus, Calendar, Clock, DollarSign, Trash2, Edit2, Ban, RotateCcw } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, Ban, RotateCcw } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -53,9 +53,17 @@ export default function Bookings() {
   const [selectedStudentDiscount, setSelectedStudentDiscount] = useState({ classDisc: 0, testDisc: 0 });
 
   // Fetch db items
-  const students = useLiveQuery(() => db.students.toArray()) || [];
-  const bookings = useLiveQuery(() => db.bookings.toArray()) || [];
+  const rawStudents = useLiveQuery(() => db.students.toArray()) || [];
+  const rawBookings = useLiveQuery(() => db.bookings.toArray()) || [];
   const pricingSettings = useLiveQuery(() => db.settings.get('pricing'));
+
+  const toTitleCase = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+  };
+
+  const students = rawStudents.map(s => ({ ...s, name: toTitleCase(s.name) }));
+  const bookings = rawBookings.map(b => ({ ...b, studentName: toTitleCase(b.studentName) }));
 
   const rates = pricingSettings || { normalRate: 63, packageRate: 63, testRate: 210 };
 
@@ -235,7 +243,7 @@ export default function Bookings() {
     const duration = parseFloat((durationMin / 60).toFixed(2));
     setEbDuration(duration);
 
-    let price = 0;
+    let price;
     if (ebType === 'test') {
       price = Math.max(0, ebRateCharged - ebDiscountApplied);
     } else {
@@ -280,7 +288,7 @@ export default function Bookings() {
       disc = selectedStudentDiscount.testDisc;
     }
 
-    let finalPrice = 0;
+    let finalPrice;
     if (bookingType === 'test') {
       finalPrice = Math.max(0, rate - disc);
     } else {
@@ -356,7 +364,7 @@ export default function Bookings() {
     }
 
     // Recompute total price at submission time using direct values
-    let finalPrice = 0;
+    let finalPrice;
     if (bookingType === 'test') {
       finalPrice = Math.max(0, rateCharged - discountApplied);
     } else {

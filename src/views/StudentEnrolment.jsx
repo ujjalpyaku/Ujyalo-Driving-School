@@ -3,6 +3,11 @@ import { db } from '../db';
 import { Phone, User, Moon, Sun, ArrowLeft, Send } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 
+const toTitleCase = (str) => {
+  if (!str) return '';
+  return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+};
+
 export default function StudentEnrolment({ theme, toggleTheme, onBackToHome }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -124,7 +129,7 @@ export default function StudentEnrolment({ theme, toggleTheme, onBackToHome }) {
     try {
       await db.enrolments.add({
         id: crypto.randomUUID(),
-        name: name.trim(),
+        name: toTitleCase(name.trim()),
         phone: normalizedPhone,
         gender,
         availability: buildAvailString(avail),

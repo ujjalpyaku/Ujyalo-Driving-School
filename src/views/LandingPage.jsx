@@ -19,6 +19,11 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+const toTitleCase = (str) => {
+  if (!str) return '';
+  return str.toLowerCase().replace(/(^|\s|-)\S/g, l => l.toUpperCase());
+};
+
 export default function LandingPage({ theme, toggleTheme, navigateTo }) {
   const handleEnrolClick = () => {
     if (navigateTo) {
@@ -74,7 +79,7 @@ export default function LandingPage({ theme, toggleTheme, navigateTo }) {
     try {
       await db.inquiries.add({
         id: Date.now().toString(),
-        name: inquiryName.trim(),
+        name: toTitleCase(inquiryName.trim()),
         phone: normalizedPhone,
         course: inquiryCourse,
         message: inquiryMsg.trim(),
