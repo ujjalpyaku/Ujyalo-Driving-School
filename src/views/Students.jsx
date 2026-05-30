@@ -221,14 +221,28 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
     if (!newName.trim() || !newPhone.trim()) {
-      alert('Please fill out student Name and Phone Number.');
+      setConfirmState({
+        show: true,
+        title: 'Missing Required Fields',
+        message: 'Please fill out student Name and Phone Number.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
     const cleanPhone = newPhone.replace(/[\s\-\(\)]/g, '');
     const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
     if (!phoneRegex.test(cleanPhone)) {
-      alert('Please enter a valid Australian mobile number (e.g. 0412 345 678 or +61 412 345 678).');
+      setConfirmState({
+        show: true,
+        title: 'Invalid Phone Number',
+        message: 'Please enter a valid Australian mobile number (e.g. 0412 345 678 or +61 412 345 678).',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
       return;
     }
 
@@ -731,14 +745,28 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
   const handleEditStudentSubmit = async (e) => {
     e.preventDefault();
     if (!editName.trim() || !editPhone.trim()) {
-      alert('Please fill out student Name and Phone Number.');
+      setConfirmState({
+        show: true,
+        title: 'Missing Required Fields',
+        message: 'Please fill out student Name and Phone Number.',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: false
+      });
       return;
     }
 
     const cleanPhone = editPhone.replace(/[\s\-\(\)]/g, '');
     const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
     if (!phoneRegex.test(cleanPhone)) {
-      alert('Please enter a valid Australian mobile number (e.g. 0412 345 678 or +61 412 345 678).');
+      setConfirmState({
+        show: true,
+        title: 'Invalid Phone Number',
+        message: 'Please enter a valid Australian mobile number (e.g. 0412 345 678 or +61 412 345 678).',
+        showCancel: false,
+        confirmText: 'OK',
+        isDanger: true
+      });
       return;
     }
 
@@ -2846,17 +2874,21 @@ export default function Students({ selectedStudentId, setSelectedStudentId }) {
               {confirmState.message}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                {confirmState.cancelText || 'Cancel'}
-              </button>
+              {confirmState.showCancel !== false && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setConfirmState(prev => ({ ...prev, show: false }))}
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  {confirmState.cancelText || 'Cancel'}
+                </button>
+              )}
               <button 
                 className={`btn ${confirmState.isDanger ? 'btn-danger' : 'btn-primary'}`} 
                 onClick={() => {
-                  confirmState.onConfirm();
+                  if (confirmState.onConfirm) {
+                    confirmState.onConfirm();
+                  }
                   setConfirmState(prev => ({ ...prev, show: false }));
                 }}
                 style={{ padding: '0.5rem 1rem' }}
