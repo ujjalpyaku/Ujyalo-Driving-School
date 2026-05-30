@@ -85,6 +85,48 @@ function App() {
     setShowLogoutConfirm(false);
   };
 
+  // Idle session timeout (10 minutes of inactivity)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const timeoutDuration = 10 * 60 * 1000; // 10 minutes
+    let timeoutId;
+
+    const logoutUser = () => {
+      setIsAuthenticated(false);
+      sessionStorage.removeItem('isAdminAuthenticated');
+      navigateTo('/admin');
+    };
+
+    const resetTimer = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(logoutUser, timeoutDuration);
+    };
+
+    // Events to track user activity
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    // Register event listeners
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Initialize the timer
+    resetTimer();
+
+    // Clean up
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [isAuthenticated]);
+
   // Auto-update student status to inactive if they haven't taken lessons in last 15 days
   useEffect(() => {
     const updateStudentStatuses = async () => {
