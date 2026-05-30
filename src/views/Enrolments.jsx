@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from '../db';
 import { db } from '../db';
 import { Search, Trash2, User, Phone, Eye, Pencil, ThumbsUp } from 'lucide-react';
@@ -30,6 +30,18 @@ export default function Enrolments() {
   const [editNotes, setEditNotes] = useState('');
 
   const enrolments = useLiveQuery(() => db.enrolments.toArray()) || [];
+
+  // Mark all new enrolment requests as read when viewing the page
+  useEffect(() => {
+    const markAsRead = async () => {
+      try {
+        await db.enrolments.where('status').equals('new').modify({ status: 'read' });
+      } catch (err) {
+        console.error("Failed to mark enrolment requests as read:", err);
+      }
+    };
+    markAsRead();
+  }, []);
 
   const showAlert = (title, message, isDanger = false) => {
     setConfirmState({

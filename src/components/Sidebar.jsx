@@ -16,11 +16,11 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme, o
     0
   );
 
-  const pendingEnrolmentsCount = useLiveQuery(
+  const newEnrolmentsCount = useLiveQuery(
     async () => {
       try {
         const list = await db.enrolments.toArray();
-        return list.filter(item => item.status === 'pending').length;
+        return list.filter(item => item.status === 'new').length;
       } catch {
         return 0;
       }
@@ -89,7 +89,7 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme, o
                     {newEnquiriesCount}
                   </span>
                 )}
-                {link.id === 'enrolments' && pendingEnrolmentsCount > 0 && (
+                {link.id === 'enrolments' && newEnrolmentsCount > 0 && (
                   <span style={{
                     background: 'var(--warning)',
                     color: 'white',
@@ -104,7 +104,7 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme, o
                     minWidth: '18px',
                     height: '18px'
                   }}>
-                    {pendingEnrolmentsCount}
+                    {newEnrolmentsCount}
                   </span>
                 )}
               </button>

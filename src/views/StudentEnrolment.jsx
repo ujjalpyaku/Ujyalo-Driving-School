@@ -131,7 +131,7 @@ export default function StudentEnrolment({ theme, toggleTheme, onBackToHome }) {
         testDate: hasTest ? testDate : '',
         testTime: hasTest ? testTime : '',
         notes: notes.trim(),
-        status: 'pending',
+        status: 'new',
         createdAt: new Date().toISOString()
       });
 
