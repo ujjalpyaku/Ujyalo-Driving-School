@@ -177,7 +177,7 @@ export default function Settings() {
     }
   };
 
-  // Export data as JSON file
+  // Export data as CSV file
   const handleExportBackup = async () => {
     try {
       const studentsData = await db.students.toArray();
@@ -185,21 +185,114 @@ export default function Settings() {
       const paymentsData = await db.payments.toArray();
       const settingsData = (await db.settings.toArray()).filter(s => s.id !== 'security');
 
-      const backup = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        students: studentsData,
-        bookings: bookingsData,
-        payments: paymentsData,
-        settings: settingsData
+      const csvRows = [];
+      
+      // Map students to flat CSV objects
+      studentsData.forEach(student => {
+        csvRows.push({
+          type: 'student',
+          id: student.id,
+          name: student.name,
+          phone: student.phone,
+          gender: student.gender,
+          availability: student.availability,
+          classRateDiscount: student.classRateDiscount || 0,
+          testRateDiscount: student.testRateDiscount || 0,
+          status: student.status || 'active',
+          notes: student.notes || '',
+          createdAt: student.createdAt || ''
+        });
+      });
+
+      // Map bookings
+      bookingsData.forEach(booking => {
+        csvRows.push({
+          type: 'booking',
+          id: booking.id,
+          studentId: booking.studentId,
+          studentName: booking.studentName,
+          studentPhone: booking.studentPhone,
+          date: booking.date,
+          timeFrom: booking.timeFrom,
+          timeTo: booking.timeTo,
+          duration: booking.duration,
+          bookingType: booking.type,
+          totalPrice: booking.totalPrice,
+          status: booking.status || 'scheduled',
+          notes: booking.notes || '',
+          createdAt: booking.createdAt || ''
+        });
+      });
+
+      // Map payments
+      paymentsData.forEach(payment => {
+        csvRows.push({
+          type: 'payment',
+          id: payment.id,
+          studentId: payment.studentId,
+          studentName: payment.studentName,
+          studentPhone: payment.studentPhone,
+          date: payment.date,
+          amount: payment.amount,
+          paymentType: payment.type,
+          createdAt: payment.createdAt || ''
+        });
+      });
+
+      // Map settings
+      settingsData.forEach(setting => {
+        if (setting.id === 'pricing') {
+          csvRows.push({
+            type: 'setting',
+            id: setting.id,
+            normalRate: setting.normalRate,
+            packageRate: setting.packageRate,
+            testRate: setting.testRate,
+            updatedAt: setting.updatedAt || ''
+          });
+        } else if (setting.id === 'schoolDetails') {
+          csvRows.push({
+            type: 'setting',
+            id: setting.id,
+            phone: setting.phone,
+            email: setting.email,
+            serviceLocations: setting.serviceLocations,
+            pickupLocations: setting.pickupLocations,
+            updatedAt: setting.updatedAt || ''
+          });
+        }
+      });
+
+      const headers = [
+        'type', 'id', 'name', 'phone', 'email', 'gender', 'availability', 
+        'classRateDiscount', 'testRateDiscount', 'status', 'notes', 'createdAt', 
+        'studentId', 'studentName', 'studentPhone', 'date', 'timeFrom', 'timeTo', 
+        'duration', 'bookingType', 'totalPrice', 'amount', 'paymentType', 
+        'normalRate', 'packageRate', 'testRate', 'serviceLocations', 'pickupLocations', 
+        'updatedAt'
+      ];
+
+      const escapeCsv = (val) => {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
       };
 
-      const jsonStr = JSON.stringify(backup, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const csvLines = [headers.join(',')];
+      for (const row of csvRows) {
+        const values = headers.map(header => escapeCsv(row[header]));
+        csvLines.push(values.join(','));
+      }
+      
+      const csvStr = csvLines.join('\r\n');
+      const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `ujyalo_driving_school_backup_${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `ujyalo_driving_school_backup_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -207,7 +300,7 @@ export default function Settings() {
     }
   };
 
-  // Import JSON backup file
+  // Import CSV backup file
   const handleImportBackup = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -217,7 +310,7 @@ export default function Settings() {
     setConfirmState({
       show: true,
       title: 'Import Backup Database',
-      message: 'WARNING: Importing this backup file will overwrite all current student details, bookings, payments, and settings in this browser database.\n\nAre you sure you want to proceed?',
+      message: 'WARNING: Importing this backup file will overwrite all current student details, bookings, payments, and settings in your database.\n\nAre you sure you want to proceed?',
       showCancel: true,
       confirmText: 'Import & Overwrite',
       isDanger: true,
@@ -225,11 +318,137 @@ export default function Settings() {
         const reader = new FileReader();
         reader.onload = async (event) => {
           try {
-            const backup = JSON.parse(event.target.result);
+            const csvText = event.target.result;
+            
+            // CSV Parsing algorithm
+            const lines = [];
+            let row = [""];
+            let inQuotes = false;
 
-            // Simple validation check
-            if (!backup.students || !backup.bookings || !backup.payments || !backup.settings) {
-              throw new Error('Invalid backup file format. Missing core databases.');
+            for (let i = 0; i < csvText.length; i++) {
+              const c = csvText[i];
+              const next = csvText[i + 1];
+
+              if (c === '"') {
+                if (inQuotes && next === '"') {
+                  row[row.length - 1] += '"';
+                  i++; // skip next quote
+                } else {
+                  inQuotes = !inQuotes;
+                }
+              } else if (c === ',') {
+                if (inQuotes) {
+                  row[row.length - 1] += ',';
+                } else {
+                  row.push("");
+                }
+              } else if (c === '\n' || c === '\r') {
+                if (inQuotes) {
+                  row[row.length - 1] += c;
+                } else {
+                  if (c === '\r' && next === '\n') {
+                    i++; // skip \n
+                  }
+                  lines.push(row);
+                  row = [""];
+                }
+              } else {
+                row[row.length - 1] += c;
+              }
+            }
+            if (row.length > 1 || row[0] !== "") {
+              lines.push(row);
+            }
+
+            if (lines.length < 2) {
+              throw new Error('Invalid backup file format. File is empty.');
+            }
+
+            const headers = lines[0].map(h => h.trim());
+            
+            // Validate headers
+            if (!headers.includes('type') || !headers.includes('id')) {
+              throw new Error('Invalid backup file format. Missing core headers (type, id).');
+            }
+
+            const csvData = [];
+            for (let i = 1; i < lines.length; i++) {
+              const values = lines[i];
+              if (values.length !== headers.length) continue;
+              const obj = {};
+              for (let j = 0; j < headers.length; j++) {
+                obj[headers[j]] = values[j];
+              }
+              csvData.push(obj);
+            }
+
+            // Restore structured data from rows
+            const students = [];
+            const bookings = [];
+            const payments = [];
+            const settings = [];
+
+            for (const r of csvData) {
+              if (r.type === 'student') {
+                students.push({
+                  id: r.id,
+                  name: r.name,
+                  phone: r.phone,
+                  gender: r.gender,
+                  availability: r.availability,
+                  classRateDiscount: r.classRateDiscount ? Number(r.classRateDiscount) : 0,
+                  testRateDiscount: r.testRateDiscount ? Number(r.testRateDiscount) : 0,
+                  status: r.status || 'active',
+                  notes: r.notes || '',
+                  createdAt: r.createdAt || ''
+                });
+              } else if (r.type === 'booking') {
+                bookings.push({
+                  id: r.id,
+                  studentId: r.studentId,
+                  studentName: r.studentName,
+                  studentPhone: r.studentPhone,
+                  date: r.date,
+                  timeFrom: r.timeFrom,
+                  timeTo: r.timeTo,
+                  duration: r.duration ? Number(r.duration) : 0,
+                  type: r.bookingType || 'package',
+                  totalPrice: r.totalPrice ? Number(r.totalPrice) : 0,
+                  status: r.status || 'scheduled',
+                  notes: r.notes || '',
+                  createdAt: r.createdAt || ''
+                });
+              } else if (r.type === 'payment') {
+                payments.push({
+                  id: r.id,
+                  studentId: r.studentId,
+                  studentName: r.studentName,
+                  studentPhone: r.studentPhone,
+                  date: r.date,
+                  amount: r.amount ? Number(r.amount) : 0,
+                  type: r.paymentType || 'cash',
+                  createdAt: r.createdAt || ''
+                });
+              } else if (r.type === 'setting') {
+                if (r.id === 'pricing') {
+                  settings.push({
+                    id: r.id,
+                    normalRate: r.normalRate ? Number(r.normalRate) : 63,
+                    packageRate: r.packageRate ? Number(r.packageRate) : 63,
+                    testRate: r.testRate ? Number(r.testRate) : 210,
+                    updatedAt: r.updatedAt || ''
+                  });
+                } else if (r.id === 'schoolDetails') {
+                  settings.push({
+                    id: r.id,
+                    phone: r.phone,
+                    email: r.email,
+                    serviceLocations: r.serviceLocations,
+                    pickupLocations: r.pickupLocations,
+                    updatedAt: r.updatedAt || ''
+                  });
+                }
+              }
             }
 
             // Wipe existing tables
@@ -241,15 +460,12 @@ export default function Settings() {
             ]);
 
             // Bulk load tables
-            if (backup.students.length > 0) await db.students.bulkAdd(backup.students);
-            if (backup.bookings.length > 0) await db.bookings.bulkAdd(backup.bookings);
-            if (backup.payments.length > 0) await db.payments.bulkAdd(backup.payments);
+            if (students.length > 0) await db.students.bulkAdd(students);
+            if (bookings.length > 0) await db.bookings.bulkAdd(bookings);
+            if (payments.length > 0) await db.payments.bulkAdd(payments);
             
-            if (backup.settings.length > 0) {
-              const filteredSettings = backup.settings.filter(s => s.id !== 'security');
-              if (filteredSettings.length > 0) {
-                await Promise.all(filteredSettings.map(s => db.settings.put(s)));
-              }
+            if (settings.length > 0) {
+              await Promise.all(settings.map(s => db.settings.put(s)));
             } else {
               // re-seed settings if empty
               await db.settings.put({
@@ -280,10 +496,11 @@ export default function Settings() {
               confirmText: 'OK',
               isDanger: true
             });
+          } finally {
+            target.value = '';
           }
         };
         reader.readAsText(file);
-        target.value = '';
       }
     });
   };
@@ -596,18 +813,18 @@ export default function Settings() {
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <h3>Database Backup & Restore</h3>
           
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            All app data is currently stored locally in your browser's memory. To prevent data loss when clearing browser history or switching computers, make regular backups.
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+            All application data is securely stored in your Google Firebase cloud database. You can export a CSV backup file for offline archiving, reporting in spreadsheet applications (like Excel or Google Sheets), or migrating environment configurations.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
             <button className="btn btn-secondary" onClick={handleExportBackup} style={{ justifyContent: 'center' }}>
-              <Download size={16} /> Export Backup (.json)
+              <Download size={16} /> Export Backup (.csv)
             </button>
             
             <input 
               type="file" 
-              accept=".json" 
+              accept=".csv" 
               style={{ display: 'none' }} 
               ref={importFileRef}
               onChange={handleImportBackup}
