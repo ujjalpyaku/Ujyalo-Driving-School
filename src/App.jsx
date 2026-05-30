@@ -9,6 +9,8 @@ import Trash from './views/Trash';
 import LandingPage from './views/LandingPage';
 import AdminLogin from './components/AdminLogin';
 import Enquiries from './views/Enquiries';
+import Enrolments from './views/Enrolments';
+import StudentEnrolment from './views/StudentEnrolment';
 import { db } from './db';
 
 function App() {
@@ -57,6 +59,8 @@ function App() {
       } else {
         document.title = 'Ujyalo Driving School - Admin Login';
       }
+    } else if (currentPath === '/student-enrolment') {
+      document.title = 'Ujyalo Driving School - Student Enrolment';
     }
   }, [currentPath, isAuthenticated]);
 
@@ -203,6 +207,8 @@ function App() {
         return <Payments />;
       case 'enquiries':
         return <Enquiries />;
+      case 'enrolments':
+        return <Enrolments />;
       case 'settings':
         return <Settings />;
       case 'trash':
@@ -218,6 +224,16 @@ function App() {
   };
 
   // Main page layout switcher based on URL path
+  if (currentPath === '/student-enrolment') {
+    return (
+      <StudentEnrolment 
+        theme={theme} 
+        toggleTheme={toggleTheme} 
+        onBackToHome={() => navigateTo('/')} 
+      />
+    );
+  }
+
   if (currentPath === '/admin') {
     if (!isAuthenticated) {
       return (
@@ -306,7 +322,7 @@ function App() {
   }
 
   // Default to Landing Page for all other routes
-  return <LandingPage theme={theme} toggleTheme={toggleTheme} />;
+  return <LandingPage theme={theme} toggleTheme={toggleTheme} navigateTo={navigateTo} />;
 }
 
 export default App;

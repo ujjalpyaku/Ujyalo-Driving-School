@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Calendar, CreditCard, Settings, Sun, Moon, Trash2, LogOut, Mail } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, CreditCard, Settings, Sun, Moon, Trash2, LogOut, Mail, UserCheck } from 'lucide-react';
 import { useLiveQuery } from '../db';
 import { db } from '../db';
 
@@ -16,11 +16,25 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme, o
     0
   );
 
+  const pendingEnrolmentsCount = useLiveQuery(
+    async () => {
+      try {
+        const list = await db.enrolments.toArray();
+        return list.filter(item => item.status === 'pending').length;
+      } catch {
+        return 0;
+      }
+    },
+    [],
+    0
+  );
+
   const links = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'students', label: 'Students', icon: Users },
     { id: 'bookings', label: 'Bookings', icon: Calendar },
     { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'enrolments', label: 'Enrolments', icon: UserCheck },
     { id: 'enquiries', label: 'Enquiries', icon: Mail },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'trash', label: 'Trash', icon: Trash2 },
@@ -73,6 +87,24 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme, o
                     height: '18px'
                   }}>
                     {newEnquiriesCount}
+                  </span>
+                )}
+                {link.id === 'enrolments' && pendingEnrolmentsCount > 0 && (
+                  <span style={{
+                    background: 'var(--warning)',
+                    color: 'white',
+                    fontSize: '0.72rem',
+                    fontWeight: 'bold',
+                    padding: '0.1rem 0.4rem',
+                    borderRadius: '10px',
+                    marginLeft: 'auto',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '18px',
+                    height: '18px'
+                  }}>
+                    {pendingEnrolmentsCount}
                   </span>
                 )}
               </button>

@@ -19,7 +19,15 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-export default function LandingPage({ theme, toggleTheme }) {
+export default function LandingPage({ theme, toggleTheme, navigateTo }) {
+  const handleEnrolClick = () => {
+    if (navigateTo) {
+      navigateTo('/student-enrolment');
+    } else {
+      window.history.pushState({}, '', '/student-enrolment');
+      window.dispatchEvent(new Event('popstate'));
+    }
+  };
   const [inquiryName, setInquiryName] = useState('');
   const [inquiryPhone, setInquiryPhone] = useState('');
   const [inquiryCourse, setInquiryCourse] = useState('Beginner Course (No experience)');
@@ -48,7 +56,7 @@ export default function LandingPage({ theme, toggleTheme }) {
   const handleInquirySubmit = async (e) => {
     e.preventDefault();
 
-    const cleanPhone = inquiryPhone.replace(/[\s\-\(\)]/g, '');
+    const cleanPhone = inquiryPhone.replace(/[\s\-()]/g, '');
     const phoneRegex = /^(?:\+?61|0)4\d{8}$/;
     if (!phoneRegex.test(cleanPhone)) {
       setShowErrorModal({ show: true, message: 'Please enter a valid Australian mobile number (e.g. 0412 345 678 or +61 412 345 678).' });
@@ -183,6 +191,7 @@ export default function LandingPage({ theme, toggleTheme }) {
             <a href="#features" className="nav-link-landing">Features</a>
             <a href="#pricing" className="nav-link-landing">Pricing</a>
             <a href="#locations" className="nav-link-landing">Locations</a>
+            <button onClick={handleEnrolClick} className="nav-link-landing" style={{ background: 'transparent', border: 'none', cursor: 'pointer', font: 'inherit', padding: 0 }}>Online Enrolment</button>
             <a href="#contact" className="btn btn-primary btn-sm" style={{ textDecoration: 'none', padding: '0.4rem 1rem', borderRadius: '20px', fontSize: '0.85rem' }}>Book Lesson</a>
             <button 
               onClick={toggleTheme}
@@ -272,9 +281,9 @@ export default function LandingPage({ theme, toggleTheme }) {
               <a href="#contact" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem', gap: '0.5rem', borderRadius: '30px', textDecoration: 'none' }}>
                 Book Your First Lesson <ArrowRight size={18} />
               </a>
-              <a href="#pricing" className="btn btn-secondary" style={{ padding: '0.75rem 1.5rem', borderRadius: '30px', textDecoration: 'none' }}>
-                View Lesson Packages
-              </a>
+              <button onClick={handleEnrolClick} className="btn btn-secondary" style={{ padding: '0.75rem 1.5rem', borderRadius: '30px', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                Online Enrolment
+              </button>
             </div>
           </div>
 

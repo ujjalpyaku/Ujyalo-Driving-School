@@ -109,18 +109,29 @@ export default function Trash() {
           confirmText: 'Restore',
           isDanger: false
         });
-      } else if (item.type === 'enquiry') {
+      } else if (item.type === 'enrolment') {
         setConfirmState({
           show: true,
-          title: 'Restore Enquiry',
-          message: `Are you sure you want to restore the booking inquiry from "${item.data.name}"?`,
+          title: 'Restore Enrolment Request',
+          message: `Are you sure you want to restore the enrolment request from "${item.data.name}"?`,
           onConfirm: async () => {
             try {
-              await db.inquiries.put(item.data);
+              // Check if a student or enrolment with the same phone number already exists
+              const allStudents = await db.students.toArray();
+              const allEnrolments = await db.enrolments.toArray();
+              const targetPhone = item.data.phone;
+              const dupStudent = allStudents.find(s => s.phone === targetPhone);
+              const dupEnrolment = allEnrolments.find(e => e.phone === targetPhone);
+              if (dupStudent || dupEnrolment) {
+                showAlert("Duplicate Phone Number", `Cannot restore "${item.data.name}". A record with the phone number ${targetPhone} is already active in ${dupStudent ? 'Students' : 'Enrolments'}.`, true);
+                return;
+              }
+
+              await db.enrolments.put(item.data);
               await db.trash.delete(item.id);
             } catch (err) {
-              console.error("Failed to restore enquiry:", err);
-              showAlert("Error Restoring Enquiry", err.message, true);
+              console.error("Failed to restore enrolment:", err);
+              showAlert("Error Restoring Enrolment", err.message, true);
             }
           },
           confirmText: 'Restore',
@@ -138,7 +149,9 @@ export default function Trash() {
       ? `Are you sure you want to PERMANENTLY delete "${item.data.student.name}" and all historical bookings/payments? This action is irreversible.`
       : item.type === 'enquiry'
         ? `Are you sure you want to PERMANENTLY delete this booking inquiry from "${item.data.name}"? This action is irreversible.`
-        : `Are you sure you want to PERMANENTLY delete this booking slot for "${item.data.studentName}"? This action is irreversible.`;
+        : item.type === 'enrolment'
+          ? `Are you sure you want to PERMANENTLY delete the enrolment request from "${item.data.name}"? This action is irreversible.`
+          : `Are you sure you want to PERMANENTLY delete this booking slot for "${item.data.studentName}"? This action is irreversible.`;
 
     setConfirmState({
       show: true,
@@ -194,6 +207,11 @@ export default function Trash() {
                       inquiry.phone.includes(searchTerm) ||
                       inquiry.course.toLowerCase().includes(searchTerm.toLowerCase()) ||
                       (inquiry.message || '').toLowerCase().includes(searchTerm.toLowerCase());
+    } else if (item.type === 'enrolment') {
+      const enrolment = item.data;
+      matchesSearch = enrolment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      enrolment.phone.includes(searchTerm) ||
+                      (enrolment.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
     }
 
     return matchesType && matchesSearch;
@@ -243,6 +261,7 @@ export default function Trash() {
               <option value="student">Student Profiles</option>
               <option value="booking">Lesson Booking Slots</option>
               <option value="enquiry">Booking Enquiries</option>
+              <option value="enrolment">Enrolment Requests</option>
             </select>
           </div>
         </div>
@@ -265,9 +284,9 @@ export default function Trash() {
                 {sortedTrash.map((item) => (
                   <tr key={item.id}>
                     <td>
-                      <span className={`badge badge-${item.type === 'student' ? 'primary' : item.type === 'enquiry' ? 'success' : 'warning'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                        {item.type === 'student' ? <User size={13} /> : item.type === 'enquiry' ? <Mail size={13} /> : <Calendar size={13} />}
-                        {item.type === 'student' ? 'Student' : item.type === 'enquiry' ? 'Enquiry' : 'Booking'}
+                      <span className={`badge badge-${item.type === 'student' ? 'primary' : item.type === 'enquiry' ? 'success' : item.type === 'enrolment' ? 'warning' : 'info'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                        {item.type === 'student' ? <User size={13} /> : item.type === 'enquiry' ? <Mail size={13} /> : item.type === 'enrolment' ? <User size={13} /> : <Calendar size={13} />}
+                        {item.type === 'student' ? 'Student' : item.type === 'enquiry' ? 'Enquiry' : item.type === 'enrolment' ? 'Enrolment' : 'Booking'}
                       </span>
                     </td>
                     <td>
@@ -283,6 +302,13 @@ export default function Trash() {
                           <strong style={{ fontSize: '1rem', color: 'var(--text-main)' }}>{item.data.name}</strong>
                           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
                             Phone: {item.data.phone} | Course: {item.data.course} | Message: {item.data.message || 'None'}
+                          </div>
+                        </div>
+                      ) : item.type === 'enrolment' ? (
+                        <div>
+                          <strong style={{ fontSize: '1rem', color: 'var(--text-main)' }}>{item.data.name} (Self Enrolment)</strong>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                            Phone: {item.data.phone} | Gender: {item.data.gender} | Availability: {item.data.availability || 'Not specified'} | Notes: {item.data.notes || 'None'}
                           </div>
                         </div>
                       ) : (

@@ -225,6 +225,7 @@ const createTable = (collectionName) => {
 // Wrapper to mimic Dexie API and minimize refactoring in UI components
 export const db = {
   students: createTable("students"),
+  enrolments: createTable("enrolments"),
   bookings: createTable("bookings"),
   payments: createTable("payments"),
   inquiries: createTable("inquiries"),
